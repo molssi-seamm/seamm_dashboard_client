@@ -1,0 +1,23 @@
+name: test
+channels:
+  - conda-forge
+dependencies:
+  # Base depends
+  - python
+  - pip
+
+  # Testing
+  - black
+  - codecov
+  - flake8
+  - pytest
+  - pytest-cov
+
+    # Pip-only installs
+  - pip:
+    # Documentation
+    - rinohtype
+    - pygments
+    - sphinxnotes-strike
+    - sphinx-rtd-theme
+    - pystemmer
