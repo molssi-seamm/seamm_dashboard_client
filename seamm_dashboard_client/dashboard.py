@@ -17,7 +17,7 @@ import requests
 
 # from requests_toolbelt.multipart.encoder import MultipartEncoder
 
-from seamm import __version__
+from seamm_dashboard_client import __version__
 
 logger = logging.getLogger(__name__)
 
