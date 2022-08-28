@@ -17,8 +17,6 @@ import requests
 
 # from requests_toolbelt.multipart.encoder import MultipartEncoder
 
-from seamm_dashboard_client import __version__
-
 logger = logging.getLogger(__name__)
 
 
@@ -67,6 +65,8 @@ class Dashboard(object):
         Parameters
         ----------
         """
+        from seamm_dashboard_client import __version__
+
         self._name = name
         self._url = url
 
