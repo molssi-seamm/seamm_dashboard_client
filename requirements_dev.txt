@@ -1,0 +1,15 @@
+-r requirements.txt
+
+black
+build
+codecov
+flake8
+pytest
+pytest-cov
+pygments
+twine
+responses
+rinohtype
+sphinx
+sphinx-rtd-theme
+pystemmer
