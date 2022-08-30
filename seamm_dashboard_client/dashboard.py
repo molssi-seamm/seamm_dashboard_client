@@ -34,25 +34,25 @@ def safe_filename(filename):
 
 
 class DashboardConnectionError(Exception):
-    def __init__(self, dashboard, args):
+    def __init__(self, dashboard, *args):
         self.dashboard = dashboard
         super().__init__(dashboard, *args)
 
 
 class DashboardLoginError(Exception):
-    def __init__(self, dashboard, args):
+    def __init__(self, dashboard, *args):
         self.dashboard = dashboard
         super().__init__(dashboard, *args)
 
 
 class DashboardTimeoutError(Exception):
-    def __init__(self, dashboard, args):
+    def __init__(self, dashboard, *args):
         self.dashboard = dashboard
         super().__init__(dashboard, *args)
 
 
 class DashboardUnknownError(Exception):
-    def __init__(self, dashboard, args):
+    def __init__(self, dashboard, *args):
         self.dashboard = dashboard
         super().__init__(dashboard, *args)
 
@@ -94,6 +94,20 @@ class Dashboard(object):
     def url(self):
         "The base url of the dashboard"
         return self._url
+
+    def job(self, job_id):
+        """Return a single job given the id."""
+
+        response = self._url_get(f"/api/jobs/{job_id}")
+
+        if response.status_code != 200:
+            logger.warning(
+                "Encountered an error getting the job from dashboard "
+                f"{self.name}, error code: {response.status_code}"
+            )
+            return {}
+
+        return _Job(self, response.json())
 
     def jobs(self, title=None, description=None, limit=None, sort_by="id", order="asc"):
         """Return a list of Job objects."""
@@ -156,6 +170,49 @@ class Dashboard(object):
             return []
 
         return response.json()
+
+    def project(self, project_id):
+        """Return a Project given the id.
+
+        Parameters
+        ----------
+        project_id : int
+            The id of the project.
+
+        Returns
+        -------
+        _Project()
+            A Project object.
+
+        .. note::
+          The Project data looks like this::
+
+            {
+               "description": "",
+               "flowcharts": [],
+               "group": "staff",
+               "group_id": 2,
+               "id": 3,
+               "jobs": [],
+               "name": "recipes",
+               "owner": "psaxe",
+               "owner_id": 2,
+               "path": "/Users/psaxe/SEAMM_DEV/Jobs/projects/recipes",
+               "special_groups": [],
+               "special_users": []
+             }
+        """
+
+        response = self._url_get(f"/api/projects/{project_id}")
+
+        if response.status_code != 200:
+            logger.warning(
+                f"Encountered an error getting the project {project_id} from dashboard "
+                f" '{self.name}', error code: {response.status_code}"
+            )
+            return {}
+
+        return _Project(self, response.json())
 
     def projects(self, name=None, description=None, limit=None):
         """Return a list of Project objects.
@@ -319,10 +376,8 @@ class Dashboard(object):
             "down"
             "error"
         """
-        url = self.url + "/api/status"
-
         try:
-            response = self._url_get(url)
+            response = self._url_get("/api/status")
         except DashboardTimeoutError:
             return "down"
         except (DashboardConnectionError, DashboardUnknownError):
@@ -617,11 +672,11 @@ class _Job(collections.abc.Mapping):
         Parameters
         ----------
         """
-        response = self.dashboard._url_get(f"/api/jobs/{self.job_id}/files")
+        response = self.dashboard._url_get(f"/api/jobs/{self.id}/files")
 
         if response.status_code != 200:
             logger.warning(
-                f"Encountered an error getting the file list from job {self.job_id} "
+                f"Encountered an error getting the file list from job {self.id} "
                 f"dashboard '{self.dashboard.name}', error code: {response.status_code}"
             )
             return []
@@ -654,13 +709,13 @@ class _Job(collections.abc.Mapping):
         """
         params = {"filename": filename}
         response = self.dashboard._url_get(
-            f"/api/jobs/{self.job_id}/files/download", params=params
+            f"/api/jobs/{self.id}/files/download", params=params
         )
 
         if response.status_code != 200:
             logger.warning(
                 "Encountered an error getting the status from dashboard"
-                f" '{self.dashboard.name}', job {self.job_id}. error code: "
+                f" '{self.dashboard.name}', job {self.id}. error code: "
                 f"{response.status_code}"
             )
             return None
