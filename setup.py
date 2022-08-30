@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """seamm_dashboard_client
-Helper programs for plotting CMS data such as bandstructures and DOS.
+A Python client for the SEAMM Dashboard RESTful API.
 """
 import sys
 from setuptools import setup, find_packages
