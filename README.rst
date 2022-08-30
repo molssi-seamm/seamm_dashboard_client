@@ -22,10 +22,6 @@ CMS Plots
    :target: https://molssi-seamm.github.io/seamm_dashboard_client/index.html
    :alt: Documentation Status
 
-.. image:: https://pyup.io/repos/github/molssi-seamm/seamm_dashboard_client/shield.svg
-   :target: https://pyup.io/repos/github/molssi-seamm/seamm_dashboard_client/
-   :alt: Updates for Dependencies
-
 .. image:: https://img.shields.io/pypi/v/seamm_dashboard_client.svg
    :target: https://pypi.python.org/pypi/seamm_dashboard_client
    :alt: PyPi VERSION
