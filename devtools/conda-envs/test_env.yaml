@@ -5,6 +5,8 @@ dependencies:
   # Base depends
   - python
   - pip
+  - requests
+  - requests-toolbelt
 
   # Testing
   - black
