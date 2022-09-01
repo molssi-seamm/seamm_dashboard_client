@@ -13,10 +13,10 @@ import json
 import logging
 from pathlib import Path, PurePath
 import platform
+import shlex
 
 import requests
-
-# from requests_toolbelt.multipart.encoder import MultipartEncoder
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,18 @@ class DashboardConnectionError(Exception):
 
 
 class DashboardLoginError(Exception):
+    def __init__(self, dashboard, *args):
+        self.dashboard = dashboard
+        super().__init__(dashboard, *args)
+
+
+class DashboardNotRunningError(Exception):
+    def __init__(self, dashboard, *args):
+        self.dashboard = dashboard
+        super().__init__(dashboard, *args)
+
+
+class DashboardSubmitError(Exception):
     def __init__(self, dashboard, *args):
         self.dashboard = dashboard
         super().__init__(dashboard, *args)
@@ -149,7 +161,7 @@ class Dashboard(object):
             "description": description,
         }
 
-        response = self._url_post("/api/projects", data=data)
+        response = self._url_post("/api/projects", json=data)
 
         if response.status_code != 201:
             raise DashboardUnknownError(
@@ -392,6 +404,122 @@ class Dashboard(object):
 
         return response.json()["status"]
 
+    def submit(
+        self,
+        flowchart,
+        values={},
+        project="default",
+        title="",
+        description="",
+    ):
+        """Submit the job to the dashboard."""
+        logger.info(f"Submitting job to {self.name} ({self.url})")
+
+        # Check the status of the dashboard
+        status = self.status()
+        if status != "running":
+            raise DashboardNotRunningError(
+                self.name,
+                f"Cannot submit a job to Dashboard {self.name} because it is not "
+                f"running. url={self.url}",
+            )
+
+        # Find any Parameter steps.
+        parameter_steps = []
+        step = flowchart.get_node("1")
+        while step:
+            if step.step_type == "control-parameters-step":
+                parameter_steps.append(step)
+            step = step.next()
+
+        # Prepare the command line arguments, transforming and remembering files
+        files = {}
+        if len(parameter_steps) == 0:
+            cmdline = []
+        else:
+            # Build the command line
+            optional = []
+            required = []
+            for step in parameter_steps:
+                variables = step.parameters["variables"]
+                for name, data in variables.value.items():
+                    if data["optional"] == "Yes":
+                        if data["type"] == "bool":
+                            if values[name] == "Yes":
+                                optional.append(f"--{name}")
+                        elif data["type"] == "file":
+                            if data["nargs"] == "a single value":
+                                filename = values[name]
+                                if filename not in files:
+                                    files[filename] = safe_filename(filename)
+                                optional.append(f"--{name}")
+                                optional.append(files[filename])
+                            else:
+                                optional.append(f"--{name}")
+                                for filename in shlex.split(values[name]):
+                                    if filename not in files:
+                                        files[filename] = safe_filename(filename)
+                                    optional.append(files[filename])
+                        else:
+                            optional.append(f"--{name}")
+                            optional.append(values[name])
+                    else:
+                        if data["type"] == "file":
+                            if data["nargs"] == "a single value":
+                                filename = values[name]
+                                if filename not in files:
+                                    files[filename] = safe_filename(filename)
+                                required.append(files[filename])
+                            else:
+                                for filename in shlex.split(values[name]):
+                                    if filename not in files:
+                                        files[filename] = safe_filename(filename)
+                                    required.append(files[filename])
+                        else:
+                            if data["nargs"] == "a single value":
+                                required.append(values[name])
+                            else:
+                                required = shlex.split(values[name])
+            cmdline = optional + required
+
+        # Prepare the data
+        data = {
+            "flowchart": flowchart.to_text(),
+            "project": project,
+            "title": title,
+            "description": description,
+            "parameters": {"cmdline": cmdline},
+            "username": self.username,
+        }
+
+        response = self._url_post("/api/jobs", json=data)
+
+        if response.status_code != 201:
+            raise DashboardSubmitError(
+                self.name,
+                f"Error submitting the job to Dashboard {self.name} url={self.url}, "
+                f"code={response.status_code}\n{response.json()}",
+            )
+
+        job_id = response.json()["id"]
+
+        if len(files) == 0:
+            logger.info("There are no files to transfer.")
+        else:
+            job = self.job(job_id)
+
+            # Now transfer the files
+            for filename, newname in files.items():
+                result = job.put_file(filename, newname)
+                if result is None:
+                    logger.warning(
+                        f"There was an error transferring the file {filename} to "
+                        f"{self.dashboard.name}."
+                    )
+
+        logger.info("Submitted job #{}".format(job_id))
+        return job_id
+
     def _url_get(self, url, headers={}, params={}, timeout=None):
         """Get the url, handling errors.
 
@@ -469,7 +597,7 @@ class Dashboard(object):
 
         return response
 
-    def _url_post(self, url, headers={}, data={}, timeout=None):
+    def _url_post(self, url, headers={}, json={}, data=None, timeout=None):
         """Post to the url, handling errors.
 
         Parameters
@@ -478,7 +606,7 @@ class Dashboard(object):
             The URL to get
         headers : dict
             Dictionary of HTTP headers to sned.
-        data : dict
+        json : dict
             A JSON serializable object to send in the body.
         timeout : int
             A custom timeout, defaults to instance value
@@ -506,13 +634,20 @@ class Dashboard(object):
             print(json.dumps(headers, indent=4))
             print()
             print("json:")
-            print(json.dumps(data, indent=4))
+            print(json.dumps(json, indent=4))
             print()
             print(20 * "x")
 
         url = self.url + url
         try:
-            response = session.post(url, json=data, headers=headers, timeout=timeout)
+            if data is None:
+                response = session.post(
+                    url, json=json, headers=headers, timeout=timeout
+                )
+            else:
+                response = session.post(
+                    url, data=data, headers=headers, timeout=timeout
+                )
         except requests.exceptions.Timeout:
             raise DashboardTimeoutError(
                 url, f"A timeout occurred contacting the dashboard {self.name}"
@@ -721,3 +856,24 @@ class _Job(collections.abc.Mapping):
             return None
 
         return response.content.decode(encoding="UTF-8")
+
+    def put_file(self, localfile, remotefile):
+        """Put a file to a job.
+
+        Parameters
+        ----------
+        local : str or Path
+            The local file
+        remotefile : str
+            The remote path from the job to the file.
+        """
+        m = MultipartEncoder(
+            fields={"file": (remotefile, open(localfile, "rb"), "text/plain")}
+        )
+        headers = {"Content-Type": m.content_type}
+
+        response = self.dashboard._url_post(
+            f"/api/jobs/{self.id}/files", headers=headers, data=m
+        )
+
+        return response
