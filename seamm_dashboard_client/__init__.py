@@ -11,6 +11,8 @@ Plots for computational materials/molecular science
 from .dashboard import Dashboard  # noqa: F401
 from .dashboard import DashboardConnectionError  # noqa: F401
 from .dashboard import DashboardLoginError  # noqa: F401
+from .dashboard import DashboardNotRunningError  # noqa: F401
+from .dashboard import DashboardSubmitError  # noqa: F401
 from .dashboard import DashboardTimeoutError  # noqa: F401
 from .dashboard import DashboardUnknownError  # noqa: F401
 

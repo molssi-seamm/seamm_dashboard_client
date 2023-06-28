@@ -330,9 +330,19 @@ class Dashboard(object):
                 f"Unknown error with the dashboard '{self.name}': ({type(e)}) {str(e)}",
             )
         else:
-            if response.status_code == 403:
+            if response.status_code == 400:
+                try:
+                    result = response.json()["msg"]
+                except Exception:
+                    result = "unknown reason"
+
                 raise DashboardLoginError(
-                    url, f"Could not log in to dashboard {self.name} as {self.username}"
+                    url,
+                    (
+                        f"Could not log in to dashboard {self.name} as "
+                        f"{self.username} / {self.password} ({result}). "
+                        "Check ~/.seammrc for this information."
+                    ),
                 )  # lgtm [py/clear-text-logging-sensitive-data]
             elif response.status_code != 200:
                 raise DashboardLoginError(
