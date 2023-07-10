@@ -472,7 +472,10 @@ class Dashboard(object):
                                     optional.append(files[filename])
                         else:
                             optional.append(f"--{name}")
-                            optional.append(values[name])
+                            if data["nargs"] == "a single value":
+                                optional.append(values[name])
+                            else:
+                                optional.extend(shlex.split(values[name]))
                     else:
                         if data["type"] == "file":
                             if data["nargs"] == "a single value":
@@ -489,7 +492,8 @@ class Dashboard(object):
                             if data["nargs"] == "a single value":
                                 required.append(values[name])
                             else:
-                                required = shlex.split(values[name])
+                                required.extend(shlex.split(values[name]))
+            optional.append("--")
             cmdline = optional + required
 
         # Prepare the data
