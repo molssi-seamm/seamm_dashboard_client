@@ -493,8 +493,11 @@ class Dashboard(object):
                                 required.append(values[name])
                             else:
                                 required.extend(shlex.split(values[name]))
-            optional.append("--")
-            cmdline = optional + required
+            if len(required) > 0:
+                optional.append("--")
+                cmdline = optional + required
+            else:
+                cmdline = optional
 
         # Prepare the data
         data = {

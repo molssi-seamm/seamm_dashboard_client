@@ -2,6 +2,9 @@
 History
 =======
 
+2023.7.29 -- Bugfix: error if no required parameters
+   * Apparently can't use '--' without subsequent parameters.
+     
 2023.7.10 -- Corrected handling of control parameters
    * Now handle control parameters with multiple values.
    * Separate the options from required parameters with '--' as required.
