@@ -2,6 +2,10 @@
 History
 =======
 
+2023.10.24 -- Improvement for job handling.
+   * Added control parameters to the data stored for the job, to support filling out
+     menus identical to how the job was submitted.
+     
 2023.7.29 -- Bugfix: error if no required parameters
    * Apparently can't use '--' without subsequent parameters.
      

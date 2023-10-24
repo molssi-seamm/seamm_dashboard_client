@@ -505,7 +505,7 @@ class Dashboard(object):
             "project": project,
             "title": title,
             "description": description,
-            "parameters": {"cmdline": cmdline},
+            "parameters": {"cmdline": cmdline, "control parameters": values},
             "username": self.username,
         }
 
