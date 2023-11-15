@@ -455,7 +455,7 @@ class Dashboard(object):
                 for name, data in variables.value.items():
                     if data["optional"] == "Yes":
                         if data["type"] == "bool":
-                            if values[name] == "Yes":
+                            if values[name]:
                                 optional.append(f"--{name}")
                         elif data["type"] == "file":
                             if data["nargs"] == "a single value":
