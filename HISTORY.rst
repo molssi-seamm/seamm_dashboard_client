@@ -1,6 +1,8 @@
 =======
 History
 =======
+2023.11.15 -- Bugfix: boolean options now work
+   * Boolean options were not handled correctly when submitting jobs.
 
 2023.10.24 -- Improvement for job handling.
    * Added control parameters to the data stored for the job, to support filling out
