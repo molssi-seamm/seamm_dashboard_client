@@ -20,7 +20,7 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 logger = logging.getLogger(__name__)
 
-logger.setLevel("DEBUG")
+# logger.setLevel("DEBUG")
 
 
 def safe_filename(filename):
