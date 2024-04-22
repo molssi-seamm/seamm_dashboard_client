@@ -1,6 +1,10 @@
 =======
 History
 =======
+2024.4.22 -- Moving user preferences to ~/.seamm.d
+    * Added better output when there are failures in the Dashboard.
+    * To better support Docker, moving ~/.seammrc to ~/.seamm.d/seamrc
+
 2023.11.15 -- Bugfix: boolean options now work
    * Boolean options were not handled correctly when submitting jobs.
 

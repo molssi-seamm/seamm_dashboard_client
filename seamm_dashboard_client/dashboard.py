@@ -20,6 +20,8 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 logger = logging.getLogger(__name__)
 
+logger.setLevel("DEBUG")
+
 
 def safe_filename(filename):
     if filename[0] == "~":
@@ -341,7 +343,7 @@ class Dashboard(object):
                     (
                         f"Could not log in to dashboard {self.name} as "
                         f"{self.username} / {self.password} ({result}). "
-                        "Check ~/.seammrc for this information."
+                        "Check ~/.seamm.d/seammrc for this information."
                     ),
                 )  # lgtm [py/clear-text-logging-sensitive-data]
             elif response.status_code != 200:
@@ -523,16 +525,41 @@ class Dashboard(object):
         if len(files) == 0:
             logger.info("There are no files to transfer.")
         else:
+            logger.info("Transferring files:")
             job = self.job(job_id)
 
             # Now transfer the files
             for filename, newname in files.items():
+                logger.info(f"   {filename} --> {newname}")
                 result = job.put_file(filename, newname)
                 if result is None:
                     logger.warning(
-                        f"There was an error transferring the file {filename} to "
-                        f"{self.dashboard.name}."
+                        f"There was a major error transferring the file {filename} to "
+                        f"{self.name}."
                     )
+                elif result.status_code == 400:
+                    logger.warning(
+                        "A bad input parameters was sent to dashboard "
+                        f"{self.name} transferring the file {filename} to it."
+                    )
+                elif result.status_code == 403:
+                    logger.warning(
+                        "The user was not properly authorized on dashboard "
+                        f"{self.name} transferring the file {filename} to it."
+                    )
+                elif result.status_code == 500:
+                    logger.warning(
+                        "There was an internal error in dashboard "
+                        f"{self.name} transferring the file {filename} to it."
+                    )
+                elif result.status_code == 201:
+                    pass
+                else:
+                    logger.warning(
+                        f"The dashboard {self.name} returned error code "
+                        "{results.status_code} transferring the file {filename} to it."
+                    )
+                    logger.debug(str(result))
 
         logger.info("Submitted job #{}".format(job_id))
         return job_id
@@ -738,7 +765,7 @@ class _Project(collections.abc.Mapping):
         if response.status_code != 200:
             logger.warning(
                 "Encountered an error getting the list of jobs for project "
-                f"{self.name} from dashboard {self.dashboard.name}, error code: "
+                f"{self.name} from dashboard {self.name}, error code: "
                 f"{response.status_code}"
             )
             return {}
