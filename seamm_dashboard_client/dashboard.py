@@ -404,7 +404,7 @@ class Dashboard(object):
             response = self._url_get("/api/status")
         except DashboardTimeoutError:
             return "down"
-        except (DashboardConnectionError, DashboardUnknownError):
+        except (DashboardConnectionError, DashboardUnknownError, DashboardLoginError):
             return "error"
 
         if response.status_code != 200:
