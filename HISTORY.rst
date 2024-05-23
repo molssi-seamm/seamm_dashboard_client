@@ -1,9 +1,14 @@
 =======
 History
 =======
+2024.5.23 -- Bugfix: crash opening a flowchart from a Dashboard
+   * SEAMM could crash when asking the Flowchart Open dialog to get the flowchart from a
+     previous job. This only happened if the Dashboard was known but the stored password
+     was wrong.
+
 2024.4.22 -- Moving user preferences to ~/.seamm.d
-    * Added better output when there are failures in the Dashboard.
-    * To better support Docker, moving ~/.seammrc to ~/.seamm.d/seamrc
+   * Added better output when there are failures in the Dashboard.
+   * To better support Docker, moving ~/.seammrc to ~/.seamm.d/seamrc
 
 2023.11.15 -- Bugfix: boolean options now work
    * Boolean options were not handled correctly when submitting jobs.
