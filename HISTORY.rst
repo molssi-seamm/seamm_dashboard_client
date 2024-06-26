@@ -1,6 +1,8 @@
 =======
 History
 =======
+2024.6.27 -- Added support for using local files in Jobs
+
 2024.5.23 -- Bugfix: crash opening a flowchart from a Dashboard
    * SEAMM could crash when asking the Flowchart Open dialog to get the flowchart from a
      previous job. This only happened if the Dashboard was known but the stored password
