@@ -1,7 +1,0 @@
-seamm_dashboard_client
-======================
-
-.. toctree::
-   :maxdepth: 4
-
-   seamm_dashboard_client
