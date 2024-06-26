@@ -436,13 +436,14 @@ class Dashboard(object):
                 f"running. url={self.url}",
             )
 
+        # Get all the nodes in the workflow
+        steps = flowchart.get_nodes()
+
         # Find any Parameter steps.
         parameter_steps = []
-        step = flowchart.get_node("1")
-        while step:
+        for step in steps:
             if step.step_type == "control-parameters-step":
                 parameter_steps.append(step)
-            step = step.next()
 
         # Prepare the command line arguments, transforming and remembering files
         files = {}
@@ -500,6 +501,23 @@ class Dashboard(object):
                 cmdline = optional + required
             else:
                 cmdline = optional
+
+        # Add files from any other steps
+        for step in steps:
+            if step in parameter_steps:
+                continue
+            for uri, path in step.data_files:
+                filename = str(path)
+                if uri.startswith("data:"):
+                    newname = "job:data/" + uri[5:]
+                    if filename in files and newname != files[filename]:
+                        raise RuntimeError(
+                            f"Duplicate file '{filename}' --> {uri[5:]} and "
+                            f"{files[filename]}"
+                        )
+                    files[filename] = newname
+                else:
+                    raise RuntimeError(f"Can't handle file '{uri}'")
 
         # Prepare the data
         data = {
