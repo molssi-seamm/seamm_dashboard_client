@@ -73,7 +73,7 @@ class DashboardUnknownError(Exception):
 
 class Dashboard(object):
     def __init__(
-        self, name, url, username=None, password=None, user_agent=None, timeout=1
+        self, name, url, username=None, password=None, user_agent=None, timeout=5
     ):
         """The interface to a Dashboard
 
@@ -549,7 +549,7 @@ class Dashboard(object):
             # Now transfer the files
             for filename, newname in files.items():
                 logger.info(f"   {filename} --> {newname}")
-                result = job.put_file(filename, newname)
+                result = job.put_file(filename, newname, timeout=60)
                 if result is None:
                     logger.warning(
                         f"There was a major error transferring the file {filename} to "
@@ -919,7 +919,7 @@ class _Job(collections.abc.Mapping):
 
         return response.content.decode(encoding="UTF-8")
 
-    def put_file(self, localfile, remotefile):
+    def put_file(self, localfile, remotefile, timeout=60):
         """Put a file to a job.
 
         Parameters
@@ -935,7 +935,7 @@ class _Job(collections.abc.Mapping):
         headers = {"Content-Type": m.content_type}
 
         response = self.dashboard._url_post(
-            f"/api/jobs/{self.id}/files", headers=headers, data=m
+            f"/api/jobs/{self.id}/files", headers=headers, data=m, timeout=timeout
         )
 
         return response

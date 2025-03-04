@@ -1,6 +1,10 @@
 =======
 History
 =======
+2025.4.3 -- Increased timeout for HTTP requests
+   * Increased the default timout to 5 seconds, and 60 seconds for submitting jobs to
+     allow time to transfer files.
+     
 2024.6.27 -- Added support for using local files in Jobs
 
 2024.5.23 -- Bugfix: crash opening a flowchart from a Dashboard
