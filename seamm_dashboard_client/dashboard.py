@@ -921,22 +921,26 @@ class _Job(collections.abc.Mapping):
             logger.warning(
                 f"A timeout occurred connecting to the dashboard {self.dashboard.name}"
             )
+            return None
         except requests.exceptions.ReadTimeout:
             logger.warning(
                 f"A timeout occurred reading from the dashboard {self.dashboard.name}"
             )
+            return None
         except requests.exceptions.ConnectionError:
             msg = (
                 "A connection error occurred contacting the dashboard "
                 f"{self.dashboard.name}"
             )
             logger.warning(msg)
+            return None
         except Exception as e:
             msg = (
                 "A unknown error occurred contacting the dashboard "
                 f"'{self.dashboard.name}'\n{type(e)} -- {str(e)}"
             )
             logger.warning(msg)
+            return None
 
         if response.status_code != 200:
             logger.warning(
