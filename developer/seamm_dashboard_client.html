@@ -1,0 +1,344 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seamm_dashboard_client package &mdash; DFTB+ Step 2025.10.31 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=68776967"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Contributing" href="contributing.html" />
+    <link rel="prev" title="seamm_dashboard_client" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            DFTB+ Step
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user/index.html">User Documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Developer Documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="readme.html">CMS Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">seamm_dashboard_client</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">seamm_dashboard_client package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html">Contributing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../history.html">History</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://molssi-seamm.github.io">Main SEAMM documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DFTB+ Step</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Developer Documentation</a></li>
+          <li class="breadcrumb-item"><a href="modules.html">seamm_dashboard_client</a></li>
+      <li class="breadcrumb-item active">seamm_dashboard_client package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/developer/seamm_dashboard_client.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="seamm-dashboard-client-package">
+<h1>seamm_dashboard_client package<a class="headerlink" href="#seamm-dashboard-client-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-seamm_dashboard_client.dashboard">
+<span id="seamm-dashboard-client-dashboard-module"></span><h2>seamm_dashboard_client.dashboard module<a class="headerlink" href="#module-seamm_dashboard_client.dashboard" title="Link to this heading"></a></h2>
+<p>A proxy for interacting with SEAMM Dashboards.</p>
+<p>This package provides functions and classes for interacting with the REST api of SEAMM
+dashboards.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seamm_dashboard_client.dashboard.</span></span><span class="sig-name descname"><span class="pre">Dashboard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user_agent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.add_project">
+<span class="sig-name descname"><span class="pre">add_project</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.add_project"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.add_project" title="Link to this definition"></a></dt>
+<dd><p>Add a project to the datastore for this dashboard.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project</strong> (<em>str</em>) – The name of the new project.</p></li>
+<li><p><strong>description</strong> (<em>str</em>) – An optional description of the project.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.job">
+<span class="sig-name descname"><span class="pre">job</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">job_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.job"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.job" title="Link to this definition"></a></dt>
+<dd><p>Return a single job given the id.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.jobs">
+<span class="sig-name descname"><span class="pre">jobs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_by</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'asc'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.jobs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.jobs" title="Link to this definition"></a></dt>
+<dd><p>Return a list of Job objects.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.list_projects">
+<span class="sig-name descname"><span class="pre">list_projects</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.list_projects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.list_projects" title="Link to this definition"></a></dt>
+<dd><p>Get a list of the projects.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.login">
+<span class="sig-name descname"><span class="pre">login</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.login"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.login" title="Link to this definition"></a></dt>
+<dd><p>Log the session into the dashboard.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dashboard</strong> (<em>str</em>) – The name of the dashboard.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>session, and the CSRF token or None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>requests.session, str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.name">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.name" title="Link to this definition"></a></dt>
+<dd><p>The name of the dashboard.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.project">
+<span class="sig-name descname"><span class="pre">project</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.project"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.project" title="Link to this definition"></a></dt>
+<dd><p>Return a Project given the id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>project_id</strong> (<em>int</em>) – The id of the project.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul>
+<li><p><em>_Project()</em> – A Project object.</p></li>
+<li><p><em>.. note::</em> –</p>
+<p>The Project data looks like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+   <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;flowcharts&quot;</span><span class="p">:</span> <span class="p">[],</span>
+   <span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="s2">&quot;staff&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;group_id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+   <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+   <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="p">[],</span>
+   <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;recipes&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;owner&quot;</span><span class="p">:</span> <span class="s2">&quot;psaxe&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;owner_id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+   <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/psaxe/SEAMM_DEV/Jobs/projects/recipes&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;special_groups&quot;</span><span class="p">:</span> <span class="p">[],</span>
+   <span class="s2">&quot;special_users&quot;</span><span class="p">:</span> <span class="p">[]</span>
+ <span class="p">}</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.projects">
+<span class="sig-name descname"><span class="pre">projects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.projects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.projects" title="Link to this definition"></a></dt>
+<dd><p>Return a list of Project objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em>) – If not None, select only projects whose name matches</p></li>
+<li><p><strong>description</strong> (<em>str</em>) – If not None, select only projects whose description matches</p></li>
+<li><p><strong>limit</strong> (<em>int</em>) – If not None, limit the number of projects to this value</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul>
+<li><p><em>[_Project]</em> – A list of Project object.</p></li>
+<li><p><em>.. note::</em> –</p>
+<p>The Project data looks like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+   <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;flowcharts&quot;</span><span class="p">:</span> <span class="p">[],</span>
+   <span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="s2">&quot;staff&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;group_id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+   <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+   <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="p">[],</span>
+   <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;recipes&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;owner&quot;</span><span class="p">:</span> <span class="s2">&quot;psaxe&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;owner_id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+   <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/psaxe/SEAMM_DEV/Jobs/projects/recipes&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;special_groups&quot;</span><span class="p">:</span> <span class="p">[],</span>
+   <span class="s2">&quot;special_users&quot;</span><span class="p">:</span> <span class="p">[]</span>
+ <span class="p">}</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.status">
+<span class="sig-name descname"><span class="pre">status</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.status" title="Link to this definition"></a></dt>
+<dd><p>The status of the Dashboard</p>
+<p>Contact the Dashboard, checking for errors, timeouts,
+etc. and report back the current status.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>status</strong> – “running”
+“down”
+“error”</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>enum (a string…)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.submit">
+<span class="sig-name descname"><span class="pre">submit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flowchart</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#Dashboard.submit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.submit" title="Link to this definition"></a></dt>
+<dd><p>Submit the job to the dashboard.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.Dashboard.url">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">url</span></span><a class="headerlink" href="#seamm_dashboard_client.dashboard.Dashboard.url" title="Link to this definition"></a></dt>
+<dd><p>The base url of the dashboard</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.DashboardConnectionError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seamm_dashboard_client.dashboard.</span></span><span class="sig-name descname"><span class="pre">DashboardConnectionError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dashboard</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#DashboardConnectionError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.DashboardConnectionError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.DashboardLoginError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seamm_dashboard_client.dashboard.</span></span><span class="sig-name descname"><span class="pre">DashboardLoginError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dashboard</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#DashboardLoginError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.DashboardLoginError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.DashboardNotRunningError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seamm_dashboard_client.dashboard.</span></span><span class="sig-name descname"><span class="pre">DashboardNotRunningError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dashboard</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#DashboardNotRunningError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.DashboardNotRunningError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.DashboardSubmitError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seamm_dashboard_client.dashboard.</span></span><span class="sig-name descname"><span class="pre">DashboardSubmitError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dashboard</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#DashboardSubmitError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.DashboardSubmitError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.DashboardTimeoutError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seamm_dashboard_client.dashboard.</span></span><span class="sig-name descname"><span class="pre">DashboardTimeoutError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dashboard</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#DashboardTimeoutError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.DashboardTimeoutError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.DashboardUnknownError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">seamm_dashboard_client.dashboard.</span></span><span class="sig-name descname"><span class="pre">DashboardUnknownError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dashboard</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#DashboardUnknownError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.DashboardUnknownError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="seamm_dashboard_client.dashboard.safe_filename">
+<span class="sig-prename descclassname"><span class="pre">seamm_dashboard_client.dashboard.</span></span><span class="sig-name descname"><span class="pre">safe_filename</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/seamm_dashboard_client/dashboard.html#safe_filename"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seamm_dashboard_client.dashboard.safe_filename" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-seamm_dashboard_client">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-seamm_dashboard_client" title="Link to this heading"></a></h2>
+<p>seamm_dashboard_client
+Plots for computational materials/molecular science</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="modules.html" class="btn btn-neutral float-left" title="seamm_dashboard_client" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="contributing.html" class="btn btn-neutral float-right" title="Contributing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
