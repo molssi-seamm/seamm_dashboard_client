@@ -73,7 +73,7 @@ class DashboardUnknownError(Exception):
 
 class Dashboard(object):
     def __init__(
-        self, name, url, username=None, password=None, user_agent=None, timeout=5
+        self, name, url, username=None, password=None, user_agent=None, timeout=60
     ):
         """The interface to a Dashboard
 
@@ -401,7 +401,7 @@ class Dashboard(object):
             "error"
         """
         try:
-            response = self._url_get("/api/status")
+            response = self._url_get("/api/status", timeout=7)
         except DashboardTimeoutError:
             return "down"
         except (DashboardConnectionError, DashboardUnknownError, DashboardLoginError):
@@ -626,10 +626,14 @@ class Dashboard(object):
         url = self.url + url
         try:
             response = session.get(url, headers=headers, params=params, timeout=timeout)
-        except requests.exceptions.Timeout:
-            msg = f"A timeout occurred contacting the dashboard {self.name}"
-            logger.info(msg)
-            raise DashboardTimeoutError(url, msg)
+        except requests.exceptions.ConnectTimeout:
+            raise DashboardTimeoutError(
+                url, f"A timeout occurred connecting to the dashboard {self.name}"
+            )
+        except requests.exceptions.ReadTimeout:
+            raise DashboardTimeoutError(
+                url, f"A timeout occurred reading from the dashboard {self.name}"
+            )
         except requests.exceptions.ConnectionError:
             msg = f"A connection error occurred contacting the dashboard {self.name}"
             logger.info(msg)
@@ -710,9 +714,13 @@ class Dashboard(object):
                 response = session.post(
                     url, data=data, headers=headers, timeout=timeout
                 )
-        except requests.exceptions.Timeout:
+        except requests.exceptions.ConnectTimeout:
             raise DashboardTimeoutError(
-                url, f"A timeout occurred contacting the dashboard {self.name}"
+                url, f"A timeout occurred connecting to the dashboard {self.name}"
+            )
+        except requests.exceptions.ReadTimeout:
+            raise DashboardTimeoutError(
+                url, f"A timeout occurred reading from the dashboard {self.name}"
             )
         except requests.exceptions.ConnectionError:
             raise DashboardConnectionError(
@@ -905,9 +913,25 @@ class _Job(collections.abc.Mapping):
             The name of the file
         """
         params = {"filename": filename}
-        response = self.dashboard._url_get(
-            f"/api/jobs/{self.id}/files/download", params=params
-        )
+        try:
+            response = self.dashboard._url_get(
+                f"/api/jobs/{self.id}/files/download", params=params
+            )
+        except requests.exceptions.ConnectTimeout:
+            logger.warning(
+                f"A timeout occurred connecting to the dashboard {self.name}"
+            )
+        except requests.exceptions.ReadTimeout:
+            logger.warning(f"A timeout occurred reading from the dashboard {self.name}")
+        except requests.exceptions.ConnectionError:
+            msg = f"A connection error occurred contacting the dashboard {self.name}"
+            logger.warning(msg)
+        except Exception as e:
+            msg = (
+                f"A unknown error occurred contacting the dashboard '{self.name}'\n"
+                f"{type(e)} -- {str(e)}"
+            )
+            logger.warning(msg)
 
         if response.status_code != 200:
             logger.warning(
@@ -934,8 +958,24 @@ class _Job(collections.abc.Mapping):
         )
         headers = {"Content-Type": m.content_type}
 
-        response = self.dashboard._url_post(
-            f"/api/jobs/{self.id}/files", headers=headers, data=m, timeout=timeout
-        )
+        try:
+            response = self.dashboard._url_post(
+                f"/api/jobs/{self.id}/files", headers=headers, data=m, timeout=timeout
+            )
+        except requests.exceptions.ConnectTimeout:
+            logger.warning(
+                f"A timeout occurred connecting to the dashboard {self.name}"
+            )
+        except requests.exceptions.ReadTimeout:
+            logger.warning(f"A timeout occurred reading from the dashboard {self.name}")
+        except requests.exceptions.ConnectionError:
+            msg = f"A connection error occurred contacting the dashboard {self.name}"
+            logger.warning(msg)
+        except Exception as e:
+            msg = (
+                f"A unknown error occurred contacting the dashboard '{self.name}'\n"
+                f"{type(e)} -- {str(e)}"
+            )
+            logger.warning(msg)
 
         return response

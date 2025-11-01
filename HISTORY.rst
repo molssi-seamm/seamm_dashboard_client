@@ -1,6 +1,10 @@
 =======
 History
 =======
+2025.10.31 -- Improved handling of timeouts
+   * Actually increased the default timeouts to 60s.
+   * Improved error messages to help diagnose problems with timeouts.
+     
 2025.4.3 -- Increased timeout for HTTP requests
    * Increased the default timout to 5 seconds, and 60 seconds for submitting jobs to
      allow time to transfer files.
