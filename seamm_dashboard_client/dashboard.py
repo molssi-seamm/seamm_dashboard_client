@@ -919,17 +919,22 @@ class _Job(collections.abc.Mapping):
             )
         except requests.exceptions.ConnectTimeout:
             logger.warning(
-                f"A timeout occurred connecting to the dashboard {self.name}"
+                f"A timeout occurred connecting to the dashboard {self.dashboard.name}"
             )
         except requests.exceptions.ReadTimeout:
-            logger.warning(f"A timeout occurred reading from the dashboard {self.name}")
+            logger.warning(
+                f"A timeout occurred reading from the dashboard {self.dashboard.name}"
+            )
         except requests.exceptions.ConnectionError:
-            msg = f"A connection error occurred contacting the dashboard {self.name}"
+            msg = (
+                "A connection error occurred contacting the dashboard "
+                f"{self.dashboard.name}"
+            )
             logger.warning(msg)
         except Exception as e:
             msg = (
-                f"A unknown error occurred contacting the dashboard '{self.name}'\n"
-                f"{type(e)} -- {str(e)}"
+                "A unknown error occurred contacting the dashboard "
+                f"'{self.dashboard.name}'\n{type(e)} -- {str(e)}"
             )
             logger.warning(msg)
 
@@ -964,17 +969,22 @@ class _Job(collections.abc.Mapping):
             )
         except requests.exceptions.ConnectTimeout:
             logger.warning(
-                f"A timeout occurred connecting to the dashboard {self.name}"
+                f"A timeout occurred connecting to the dashboard {self.dashboard.name}"
             )
         except requests.exceptions.ReadTimeout:
-            logger.warning(f"A timeout occurred reading from the dashboard {self.name}")
+            logger.warning(
+                f"A timeout occurred reading from the dashboard {self.dashboard.name}"
+            )
         except requests.exceptions.ConnectionError:
-            msg = f"A connection error occurred contacting the dashboard {self.name}"
+            msg = (
+                "A connection error occurred contacting the dashboard "
+                "{self.dashboard.name}"
+            )
             logger.warning(msg)
         except Exception as e:
             msg = (
-                f"A unknown error occurred contacting the dashboard '{self.name}'\n"
-                f"{type(e)} -- {str(e)}"
+                "A unknown error occurred contacting the dashboard "
+                f"'{self.dashboard.name}'\n{type(e)} -- {str(e)}"
             )
             logger.warning(msg)
 
