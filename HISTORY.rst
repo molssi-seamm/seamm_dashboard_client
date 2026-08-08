@@ -1,6 +1,12 @@
 =======
 History
 =======
+2026.8.8 -- Bugfix: login() failed against dashboards with no CSRF cookie
+   * Dashboard.login() raised DashboardLoginError if a dashboard's login response had no
+     CSRF cookie, even though the login itself succeeded. Some dashboards (e.g. the new
+     seamm_webui) don't use a CSRF cookie at all; a missing one is now treated as
+     "nothing extra to send" rather than a failure.
+
 2025.10.31 -- Improved handling of timeouts
    * Actually increased the default timeouts to 60s.
    * Improved error messages to help diagnose problems with timeouts.
