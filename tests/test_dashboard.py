@@ -963,3 +963,27 @@ def test_project_jobs():
         print(result)
         print("---")
     assert result == answer
+
+
+@responses.activate
+def test_login_without_csrf_cookie():
+    """Not every dashboard uses a CSRF double-submit cookie -- seamm_webui
+    deliberately doesn't (SameSite + CORS instead, see its auth.py). A
+    successful login response with no CSRF cookie at all must still count
+    as a successful login, just with no X-CSRF-TOKEN header to send
+    afterward, not raise DashboardLoginError.
+    """
+    d = Dashboard("test", test_url, username="psaxe", password="secret")
+
+    responses.add(
+        responses.POST,
+        "http://test/api/auth/token",
+        json={"username": "psaxe"},
+        status=200,
+        # No Set-Cookie header at all -- unlike the old dashboard, which
+        # always sets access/refresh + CSRF cookies together.
+    )
+
+    session, csrf_token = d.login()
+    assert csrf_token is None
+    assert session is not None

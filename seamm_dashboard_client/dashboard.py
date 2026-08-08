@@ -163,7 +163,7 @@ class Dashboard(object):
             "description": description,
         }
 
-        response = self._url_post("/api/projects", json=data)
+        response = self._url_post("/api/projects", json_data=data)
 
         if response.status_code != 201:
             raise DashboardUnknownError(
@@ -332,6 +332,15 @@ class Dashboard(object):
                 f"Unknown error with the dashboard '{self.name}': ({type(e)}) {str(e)}",
             )
         else:
+            if self._dump:
+                print("Result from call:")
+                print(f"status = {response.status_code}")
+                print(f"reason = {response.reason}")
+                print("Headers")
+                print(json.dumps({**response.headers}, indent=4))
+                print(f"Text:\n{response.text}")
+                print(20 * "x")
+
             if response.status_code == 400:
                 try:
                     result = response.json()["msg"]
@@ -358,11 +367,14 @@ class Dashboard(object):
                 if "csrf_access_token" in cookies:
                     csrf_token = cookies["csrf_access_token"]
                 else:
-                    raise DashboardLoginError(
-                        url,
-                        f"Could not log in to dashboard {self.name} -- did not get "
-                        "CSRF token",
-                    )
+                    # Not every dashboard uses a CSRF double-submit cookie
+                    # (e.g. seamm_webui deliberately doesn't -- it relies
+                    # on SameSite + CORS instead). The login itself already
+                    # succeeded (200, session cookie set); a missing CSRF
+                    # cookie just means don't send the X-CSRF-TOKEN header,
+                    # not that login failed. _url_get/_url_post already
+                    # treat csrf_token=None as "no header to add".
+                    csrf_token = None
         finally:
             if self._dump:
                 print()
@@ -529,7 +541,7 @@ class Dashboard(object):
             "username": self.username,
         }
 
-        response = self._url_post("/api/jobs", json=data)
+        response = self._url_post("/api/jobs", json_data=data)
 
         if response.status_code != 201:
             raise DashboardSubmitError(
@@ -663,7 +675,7 @@ class Dashboard(object):
 
         return response
 
-    def _url_post(self, url, headers={}, json={}, data=None, timeout=None):
+    def _url_post(self, url, headers={}, json_data={}, data=None, timeout=None):
         """Post to the url, handling errors.
 
         Parameters
@@ -672,7 +684,7 @@ class Dashboard(object):
             The URL to get
         headers : dict
             Dictionary of HTTP headers to sned.
-        json : dict
+        json_data : dict
             A JSON serializable object to send in the body.
         timeout : int
             A custom timeout, defaults to instance value
@@ -700,7 +712,7 @@ class Dashboard(object):
             print(json.dumps(headers, indent=4))
             print()
             print("json:")
-            print(json.dumps(json, indent=4))
+            print(json.dumps(json_data, indent=4))
             print()
             print(20 * "x")
 
@@ -708,7 +720,7 @@ class Dashboard(object):
         try:
             if data is None:
                 response = session.post(
-                    url, json=json, headers=headers, timeout=timeout
+                    url, json=json_data, headers=headers, timeout=timeout
                 )
             else:
                 response = session.post(
