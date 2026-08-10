@@ -173,13 +173,49 @@ class Dashboard(object):
             )
 
     def list_projects(self):
-        """Get a list of the projects."""
-        response = self._url_get("/api/projects/list")
+        """Get a list of the project names.
+
+        Uses ``GET /api/projects`` (full project objects, ``name`` a
+        required field on both backends -- see the old ``seamm_dashboard``'s
+        ``swagger.yml``) and extracts just the names, rather than the old
+        dashboard-only ``GET /api/projects/list`` (a list of bare name
+        strings) this used to call: ``seamm_webui`` has no such endpoint at
+        all -- hitting it there 422s (FastAPI trying to parse the literal
+        path segment ``"list"`` as an ``/api/projects/{project_id}``
+        integer). This shape works identically against both, so no
+        per-backend branching is needed.
+        """
+        response = self._url_get("/api/projects")
 
         if response.status_code != 200:
             logger.warning(
                 "Encountered an error getting the project list from dashboard "
                 f" '{self.name}', error code: {response.status_code}"
+            )
+            return []
+
+        return [project["name"] for project in response.json()]
+
+    def list_queues(self):
+        """Get the list of queues (cluster/section targets) this
+        dashboard's paired JobServer instance can route jobs to, with the
+        per-field override limits a submission client should render as
+        constrained inputs -- see seamm_jobserver's
+        docs/developer_guide/campaigns/2026-08-10/ (multi-queue routing).
+
+        Empty if the dashboard doesn't support this at all (only
+        seamm_webui implements ``GET /api/queues`` -- an old
+        seamm_dashboard 404s) or has no queues configured there -- both
+        treated as an ordinary case, not an error, since queue routing is
+        an optional, additive feature a caller should just not offer a
+        picker for rather than fail over.
+        """
+        response = self._url_get("/api/queues")
+
+        if response.status_code != 200:
+            logger.debug(
+                f"Dashboard '{self.name}' has no queues available "
+                f"(code={response.status_code}); treating as none configured."
             )
             return []
 
@@ -298,7 +334,15 @@ class Dashboard(object):
         url = self.url + "/api/auth/token"
         session = requests.session()
 
-        if self.username is None or self.password is None:
+        # Treat a blank string the same as None -- not just a defensive
+        # equivalence. seamm/tk_job_handler.py's credential dialog returns
+        # "" (not None) for a field left empty when the user clicks OK,
+        # e.g. against a seamm_webui instance running --auth none, which
+        # needs no real login at all. Without this, an empty-but-not-None
+        # username/password would be POSTed as real credentials and
+        # rejected (no user named ""), raising DashboardLoginError instead
+        # of the no-login-needed path this is clearly asking for.
+        if not self.username or not self.password:
             return session, None
 
         headers = {"User-Agent": self.user_agent}
@@ -435,8 +479,27 @@ class Dashboard(object):
         project="default",
         title="",
         description="",
+        queue=None,
+        slurm_overrides=None,
     ):
-        """Submit the job to the dashboard."""
+        """Submit the job to the dashboard.
+
+        Parameters
+        ----------
+        queue : str or None
+            Which queue (cluster/section) the paired JobServer instance
+            should route this job to -- one of the names ``list_queues()``
+            returns. ``None`` (default) lets the JobServer fall back to its
+            own configured default queue, or run it locally if it has no
+            queue config at all -- see seamm_jobserver's
+            docs/developer_guide/campaigns/2026-08-10/.
+        slurm_overrides : dict or None
+            Per-directive SLURM overrides for this job, e.g.
+            ``{"ntasks": 4, "mem": "40G"}`` -- must be authorized by the
+            chosen queue's ``limits`` (from ``list_queues()``); the
+            JobServer re-validates server-side regardless of what this
+            sends.
+        """
         logger.info(f"Submitting job to {self.name} ({self.url})")
 
         # Check the status of the dashboard
@@ -532,12 +595,18 @@ class Dashboard(object):
                     raise RuntimeError(f"Can't handle file '{uri}'")
 
         # Prepare the data
+        parameters = {"cmdline": cmdline, "control parameters": values}
+        if queue is not None:
+            parameters["queue"] = queue
+        if slurm_overrides:
+            parameters["slurm"] = slurm_overrides
+
         data = {
             "flowchart": flowchart.to_text(),
             "project": project,
             "title": title,
             "description": description,
-            "parameters": {"cmdline": cmdline, "control parameters": values},
+            "parameters": parameters,
             "username": self.username,
         }
 
