@@ -1,6 +1,30 @@
 =======
 History
 =======
+2026.8.10 -- Multi-queue job submission, and two real seamm_webui compatibility bugs
+    * ``Dashboard.list_queues()``: lists the queues (clusters, or a plain
+      local target) the dashboard's paired JobServer can route jobs to,
+      with each field's override limits -- empty (not an error) against a
+      dashboard that doesn't support this. ``Dashboard.submit()`` gained
+      ``queue=``/``slurm_overrides=`` keyword arguments to request a
+      specific queue and per-job SLURM resource overrides; omitted
+      entirely from the submitted job's parameters when not given, so
+      existing callers are unaffected.
+    * Bugfix: ``Dashboard.login()`` treated a blank username/password
+      (``""``) differently from not providing one at all (``None``),
+      POSTing empty credentials as if real -- rejected by the dashboard,
+      breaking login against any dashboard running with no authentication
+      required. A blank credential now skips the login attempt entirely,
+      the same as ``None`` already did.
+    * Bugfix: ``Dashboard.list_projects()`` only worked against the old
+      Flask-based dashboard's ``GET /api/projects/list`` endpoint --
+      ``seamm_webui`` has no such route at all and returned an error.
+      Switched to ``GET /api/projects`` (returns full project records
+      instead of bare names) and extracts the names client-side; this
+      endpoint exists, with the same project-name field, on both
+      dashboard implementations, so ``list_projects()`` now works
+      against either without needing to know which one it's talking to.
+
 2026.8.8 -- Bugfix: login() failed against dashboards with no CSRF cookie
    * Dashboard.login() raised DashboardLoginError if a dashboard's login response had no
      CSRF cookie, even though the login itself succeeded. Some dashboards (e.g. the new

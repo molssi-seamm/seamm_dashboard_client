@@ -3,6 +3,7 @@
 
 """Tests for `seamm_dashboard_client` package."""
 
+import json
 import re
 
 import pytest  # noqa: F401
@@ -19,6 +20,20 @@ def test_construction():
     """Just create an object and test its type."""
     result = Dashboard("dev", url)
     assert str(type(result)) == "<class 'seamm_dashboard_client.dashboard.Dashboard'>"
+
+
+@responses.activate
+def test_login_blank_credentials_skips_token_post():
+    # seamm/tk_job_handler.py's credential dialog returns "" (not None)
+    # for a field left blank on OK -- must be treated as "no login
+    # needed" (e.g. against a seamm_webui --auth none instance), not
+    # POSTed as real (and rejected) credentials.
+    d = Dashboard("test", test_url, username="", password="")
+
+    session, csrf_token = d.login()
+
+    assert csrf_token is None
+    assert len(responses.calls) == 0  # never POSTed to /api/auth/token at all
 
 
 @responses.activate
@@ -235,13 +250,161 @@ def test_list_projects():
 
         responses.add(
             responses.GET,
-            "http://test/api/projects/list",
-            json=["default", "packmol", "recipes"],
+            "http://test/api/projects",
+            json=[
+                {"id": 1, "name": "default", "path": "/x/default"},
+                {"id": 2, "name": "packmol", "path": "/x/packmol"},
+                {"id": 3, "name": "recipes", "path": "/x/recipes"},
+            ],
             status=200,
         )
 
     result = d.list_projects()
     assert result == ["default", "packmol", "recipes"]
+
+
+@responses.activate
+def test_list_queues():
+    "Test listing the queues (seamm_webui's GET /api/queues)."
+    d = Dashboard("test", test_url)
+
+    responses.add(
+        responses.POST,
+        "https://test/api/auth/token",
+        status=200,
+    )
+    responses.add(
+        responses.GET,
+        "http://test/api/queues",
+        json=[
+            {
+                "name": "local",
+                "type": "local",
+                "default": False,
+                "limits": {},
+            },
+            {
+                "name": "molssi10",
+                "type": "slurm",
+                "default": True,
+                "limits": {
+                    "ntasks": {
+                        "choices": None,
+                        "minimum": "1",
+                        "maximum": "6",
+                        "current": "1",
+                    }
+                },
+            },
+        ],
+        status=200,
+    )
+
+    result = d.list_queues()
+    assert [q["name"] for q in result] == ["local", "molssi10"]
+    assert result[1]["default"] is True
+    assert result[1]["limits"]["ntasks"]["maximum"] == "6"
+
+
+@responses.activate
+def test_list_queues_not_supported_returns_empty_list():
+    "An old seamm_dashboard has no GET /api/queues at all -- treat as none."
+    d = Dashboard("test", test_url)
+
+    responses.add(
+        responses.POST,
+        "https://test/api/auth/token",
+        status=200,
+    )
+    responses.add(
+        responses.GET,
+        "http://test/api/queues",
+        status=404,
+    )
+
+    assert d.list_queues() == []
+
+
+class _FakeStep:
+    step_type = "some-step"
+    data_files = []
+
+
+class _FakeFlowchart:
+    """Duck-types just what Dashboard.submit() actually touches -- no
+    Parameter steps and no data files, so no file-transfer requests are
+    made, keeping this a pure unit test of the parameters payload."""
+
+    def get_nodes(self):
+        return [_FakeStep()]
+
+    def to_text(self):
+        return "flowchart text"
+
+
+@responses.activate
+def test_submit_includes_queue_and_slurm_overrides():
+    d = Dashboard("test", test_url)
+
+    responses.add(
+        responses.POST,
+        "https://test/api/auth/token",
+        status=200,
+    )
+    responses.add(
+        responses.GET,
+        "http://test/api/status",
+        json={"status": "running"},
+        status=200,
+    )
+    responses.add(
+        responses.POST,
+        "http://test/api/jobs",
+        json={"id": 42},
+        status=201,
+    )
+
+    d.submit(
+        _FakeFlowchart(),
+        title="a job",
+        queue="molssi10",
+        slurm_overrides={"ntasks": 4},
+    )
+
+    post = [c for c in responses.calls if c.request.url == "http://test/api/jobs"][0]
+    body = json.loads(post.request.body)
+    assert body["parameters"]["queue"] == "molssi10"
+    assert body["parameters"]["slurm"] == {"ntasks": 4}
+
+
+@responses.activate
+def test_submit_omits_queue_and_slurm_when_not_given():
+    d = Dashboard("test", test_url)
+
+    responses.add(
+        responses.POST,
+        "https://test/api/auth/token",
+        status=200,
+    )
+    responses.add(
+        responses.GET,
+        "http://test/api/status",
+        json={"status": "running"},
+        status=200,
+    )
+    responses.add(
+        responses.POST,
+        "http://test/api/jobs",
+        json={"id": 43},
+        status=201,
+    )
+
+    d.submit(_FakeFlowchart(), title="a job")
+
+    post = [c for c in responses.calls if c.request.url == "http://test/api/jobs"][0]
+    body = json.loads(post.request.body)
+    assert "queue" not in body["parameters"]
+    assert "slurm" not in body["parameters"]
 
 
 @responses.activate
