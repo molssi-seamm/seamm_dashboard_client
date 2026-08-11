@@ -1,0 +1,215 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>History &mdash; DFTB+ Step 2026.8.11 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d9a48a5b"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Credits" href="authors.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            DFTB+ Step
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="user/index.html">User Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer/index.html">Developer Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">History</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://molssi-seamm.github.io">Main SEAMM documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DFTB+ Step</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">History</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/history.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="history">
+<h1>History<a class="headerlink" href="#history" title="Link to this heading"></a></h1>
+<dl class="simple">
+<dt>2026.8.11 – Bugfix: no way to trust a self-signed dashboard TLS certificate</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Dashboard</span></code> gained a <code class="docutils literal notranslate"><span class="pre">verify</span></code> parameter (default <code class="docutils literal notranslate"><span class="pre">True</span></code>,
+matching <code class="docutils literal notranslate"><span class="pre">requests</span></code>’ own default – no change for any existing
+caller). <code class="docutils literal notranslate"><span class="pre">False</span></code> disables certificate verification entirely
+(insecure); a path to a certificate file verifies against that
+specific certificate instead of the system trust store – e.g. a
+self-signed <code class="docutils literal notranslate"><span class="pre">seamm_webui</span></code> certificate generated for a
+non-loopback bind, which <code class="docutils literal notranslate"><span class="pre">requests</span></code> previously had no way to
+trust at all, hard-failing every request with
+<code class="docutils literal notranslate"><span class="pre">SSLCertVerificationError</span></code>.</p></li>
+<li><p>A certificate path does genuine certificate <em>pinning</em>, not just a
+custom CA: it also skips the hostname/SAN match <code class="docutils literal notranslate"><span class="pre">requests</span></code>
+normally still enforces even once a certificate’s signature is
+trusted, since a self-signed certificate’s SAN list (the machine’s
+own reported hostname) can legitimately differ from the DNS name a
+client actually reaches it through (confirmed for real: a
+<code class="docutils literal notranslate"><span class="pre">seamm_webui</span></code> certificate listing only its VT-campus-internal
+FQDN, reached instead via a separate public DNS alias). Fetching
+the exact certificate file out-of-band already establishes “this is
+the server I mean” – the same property a hostname check
+approximates when verifying against a general CA that could have
+signed a certificate for any host.</p></li>
+</ul>
+</dd>
+<dt>2026.8.10 – Multi-queue job submission, and two real seamm_webui compatibility bugs</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Dashboard.list_queues()</span></code>: lists the queues (clusters, or a plain
+local target) the dashboard’s paired JobServer can route jobs to,
+with each field’s override limits – empty (not an error) against a
+dashboard that doesn’t support this. <code class="docutils literal notranslate"><span class="pre">Dashboard.submit()</span></code> gained
+<code class="docutils literal notranslate"><span class="pre">queue=</span></code>/<code class="docutils literal notranslate"><span class="pre">slurm_overrides=</span></code> keyword arguments to request a
+specific queue and per-job SLURM resource overrides; omitted
+entirely from the submitted job’s parameters when not given, so
+existing callers are unaffected.</p></li>
+<li><p>Bugfix: <code class="docutils literal notranslate"><span class="pre">Dashboard.login()</span></code> treated a blank username/password
+(<code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code>) differently from not providing one at all (<code class="docutils literal notranslate"><span class="pre">None</span></code>),
+POSTing empty credentials as if real – rejected by the dashboard,
+breaking login against any dashboard running with no authentication
+required. A blank credential now skips the login attempt entirely,
+the same as <code class="docutils literal notranslate"><span class="pre">None</span></code> already did.</p></li>
+<li><p>Bugfix: <code class="docutils literal notranslate"><span class="pre">Dashboard.list_projects()</span></code> only worked against the old
+Flask-based dashboard’s <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/api/projects/list</span></code> endpoint –
+<code class="docutils literal notranslate"><span class="pre">seamm_webui</span></code> has no such route at all and returned an error.
+Switched to <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/api/projects</span></code> (returns full project records
+instead of bare names) and extracts the names client-side; this
+endpoint exists, with the same project-name field, on both
+dashboard implementations, so <code class="docutils literal notranslate"><span class="pre">list_projects()</span></code> now works
+against either without needing to know which one it’s talking to.</p></li>
+</ul>
+</dd>
+<dt>2026.8.8 – Bugfix: login() failed against dashboards with no CSRF cookie</dt><dd><ul class="simple">
+<li><p>Dashboard.login() raised DashboardLoginError if a dashboard’s login response had no
+CSRF cookie, even though the login itself succeeded. Some dashboards (e.g. the new
+seamm_webui) don’t use a CSRF cookie at all; a missing one is now treated as
+“nothing extra to send” rather than a failure.</p></li>
+</ul>
+</dd>
+<dt>2025.10.31 – Improved handling of timeouts</dt><dd><ul class="simple">
+<li><p>Actually increased the default timeouts to 60s.</p></li>
+<li><p>Improved error messages to help diagnose problems with timeouts.</p></li>
+</ul>
+</dd>
+<dt>2025.4.3 – Increased timeout for HTTP requests</dt><dd><ul class="simple">
+<li><p>Increased the default timout to 5 seconds, and 60 seconds for submitting jobs to
+allow time to transfer files.</p></li>
+</ul>
+</dd>
+</dl>
+<p>2024.6.27 – Added support for using local files in Jobs</p>
+<dl class="simple">
+<dt>2024.5.23 – Bugfix: crash opening a flowchart from a Dashboard</dt><dd><ul class="simple">
+<li><p>SEAMM could crash when asking the Flowchart Open dialog to get the flowchart from a
+previous job. This only happened if the Dashboard was known but the stored password
+was wrong.</p></li>
+</ul>
+</dd>
+<dt>2024.4.22 – Moving user preferences to ~/.seamm.d</dt><dd><ul class="simple">
+<li><p>Added better output when there are failures in the Dashboard.</p></li>
+<li><p>To better support Docker, moving ~/.seammrc to ~/.seamm.d/seamrc</p></li>
+</ul>
+</dd>
+<dt>2023.11.15 – Bugfix: boolean options now work</dt><dd><ul class="simple">
+<li><p>Boolean options were not handled correctly when submitting jobs.</p></li>
+</ul>
+</dd>
+<dt>2023.10.24 – Improvement for job handling.</dt><dd><ul class="simple">
+<li><p>Added control parameters to the data stored for the job, to support filling out
+menus identical to how the job was submitted.</p></li>
+</ul>
+</dd>
+<dt>2023.7.29 – Bugfix: error if no required parameters</dt><dd><ul class="simple">
+<li><p>Apparently can’t use ‘–’ without subsequent parameters.</p></li>
+</ul>
+</dd>
+<dt>2023.7.10 – Corrected handling of control parameters</dt><dd><ul class="simple">
+<li><p>Now handle control parameters with multiple values.</p></li>
+<li><p>Separate the options from required parameters with ‘–’ as required.</p></li>
+</ul>
+</dd>
+</dl>
+<p>2023.6.28 – Improved error messages for login failures.</p>
+<section id="august-2022">
+<h2>2022.8.13 (13 August 2022)<a class="headerlink" href="#august-2022" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>First release of a working version on PyPI.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="authors.html" class="btn btn-neutral float-left" title="Credits" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
