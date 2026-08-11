@@ -5,6 +5,7 @@
 
 import json
 import re
+from unittest.mock import MagicMock, patch
 
 import pytest  # noqa: F401
 import responses
@@ -14,6 +15,42 @@ import seamm_dashboard_client
 
 url = "http://localhost:55066"  # Real server for getting response data
 test_url = "http://test"  # Mock server
+
+# A throwaway self-signed cert (CN=test-fixture, 100-year expiry, openssl
+# req -x509 -newkey rsa:2048 -nodes) -- only used so
+# ssl.create_default_context(cafile=...) has a real, parseable PEM file to
+# load; never validated against a real connection in these unit tests
+# (that's covered by real, live validation against MolSSI10 instead, not
+# something to duplicate here with a new cryptography/openssl test
+# dependency).
+_TEST_CERT_PEM = """\
+-----BEGIN CERTIFICATE-----
+MIIDETCCAfmgAwIBAgIUL7gptcCZJFWN1Cm9llovTBtmT70wDQYJKoZIhvcNAQEL
+BQAwFzEVMBMGA1UEAwwMdGVzdC1maXh0dXJlMCAXDTI2MDgxMTE1MjYwOVoYDzIx
+MjYwNzE4MTUyNjA5WjAXMRUwEwYDVQQDDAx0ZXN0LWZpeHR1cmUwggEiMA0GCSqG
+SIb3DQEBAQUAA4IBDwAwggEKAoIBAQCayfnqE3Va2n1lxSCG19yMOeYnvFxqJyOp
+0qk07qy+kDEeBKINjfQ1dhpGyzT7r0Tq+WPbv2qcKo2rDJn04PDKzeHDkZhEO3Is
+VAiMEEKUWVIMYdlxxL3IaQSdykJypzbSaLfa/OcnoeFGMmIWL74pY+A69vuiiXja
+EuZIDcRCmoM98Cs1TzaChYx053DFyYQzM1un8Mv0i8zxNgNlLjZ1KuX+Cv3iD/Cs
+ViED1sE9iUCcdfu0pLntPxZaSxhlW54B+EPAzzMKAJ9o4XMP7YpvQZW0evKXMVP6
+KQOx0KngNrO5zpZ2Pjb45YyQaqaWYjYaaHYcN0LtZ4+B0a99gxrDAgMBAAGjUzBR
+MB0GA1UdDgQWBBQJSVjXIHayo1NQAjetvyDhqjwR8zAfBgNVHSMEGDAWgBQJSVjX
+IHayo1NQAjetvyDhqjwR8zAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUA
+A4IBAQBkPGn5WfYwRLZ3J1aDlS/JdO/01igxYQaBXUoLAgo/9+06RtsjinEG64HP
+/NiCop+/lijUI7hDK/ug9GlqCNPHca+z0uupra38sxPyANYAW+7DWpHRqEcg2eUy
+6CPZWVnFbH8+/CKk/b4mHaScQfHNqGSQsExwkqyS0InEi7ZZ249+TOP9hERwEawG
+aNU4NuvGKwW3RVW/Nf41WSLVCtpiq3vUm/Z06D41DGZjeQoarcJEQ7C6FI+p0HON
+fZxkavpjgL+dBQhl5Jr/iCw8gsLUqBVcoGn9u7U9+MZv2Kqx0j+59VvchL3Aqn9a
+oEqW7KJUcsOeuLuO4j/S02oATzU4
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def cert_path(tmp_path):
+    path = tmp_path / "webui.crt"
+    path.write_text(_TEST_CERT_PEM)
+    return str(path)
 
 
 def test_construction():
@@ -1150,3 +1187,149 @@ def test_login_without_csrf_cookie():
     session, csrf_token = d.login()
     assert csrf_token is None
     assert session is not None
+
+
+# --- TLS verification (verify=) -------------------------------------------
+#
+# Added for a real dashboard: seamm_webui generates a self-signed
+# certificate for a non-loopback bind (its tls.py) -- requests' own default
+# (verify=True against the system trust store) hard-rejects that with no
+# way to override from dashboards.ini before this. `responses` mocks below
+# the point where `verify` would matter, so these use unittest.mock
+# directly on requests.Session.get/post to confirm the actual kwarg is
+# threaded through, not just stored.
+
+
+def _fake_response(status_code=200, json_data=None):
+    resp = MagicMock()
+    resp.status_code = status_code
+    resp.cookies.get_dict.return_value = {}
+    resp.json.return_value = json_data if json_data is not None else {}
+    return resp
+
+
+def test_verify_defaults_to_true():
+    d = Dashboard("test", test_url)
+    assert d.verify is True
+
+
+def test_verify_stores_false():
+    d = Dashboard("test", test_url, verify=False)
+    assert d.verify is False
+
+
+def test_verify_stores_cert_path():
+    d = Dashboard("test", test_url, verify="/path/to/webui.crt")
+    assert d.verify == "/path/to/webui.crt"
+
+
+def test_login_passes_verify_to_session_post(cert_path):
+    d = Dashboard("test", test_url, username="u", password="p", verify=cert_path)
+    with patch("requests.Session.post", return_value=_fake_response()) as mock_post:
+        d.login()
+
+    assert mock_post.call_args.kwargs["verify"] == cert_path
+
+
+def test_url_get_passes_verify_for_login_and_request(cert_path):
+    """Both the internal login POST and the actual GET must carry verify --
+    _url_get() logs in fresh on every call (see login())."""
+    calls = []
+
+    def fake_post(self, url, **kwargs):
+        calls.append(("POST", url, kwargs.get("verify")))
+        return _fake_response()
+
+    def fake_get(self, url, **kwargs):
+        calls.append(("GET", url, kwargs.get("verify")))
+        return _fake_response()
+
+    d = Dashboard("test", test_url, username="u", password="p", verify=cert_path)
+    with patch("requests.Session.post", fake_post), patch(
+        "requests.Session.get", fake_get
+    ):
+        d._url_get("/api/status")
+
+    assert [v for (_, _, v) in calls] == [cert_path, cert_path]
+
+
+def test_url_post_passes_verify_for_login_and_request(cert_path):
+    calls = []
+
+    def fake_post(self, url, **kwargs):
+        calls.append((url, kwargs.get("verify")))
+        # Login (POST /api/auth/token) must see 200 to be considered
+        # successful; the actual request (POST /api/jobs here) is free to
+        # return whatever status the real endpoint would.
+        status_code = 200 if url.endswith("/api/auth/token") else 201
+        return _fake_response(status_code=status_code, json_data={"id": 1})
+
+    d = Dashboard("test", test_url, username="u", password="p", verify=cert_path)
+    with patch("requests.Session.post", fake_post):
+        d._url_post("/api/jobs", json_data={})
+
+    # One POST for /api/auth/token (login), one for /api/jobs -- both
+    # carrying the same verify value.
+    assert len(calls) == 2
+    assert all(v == cert_path for (_, v) in calls)
+
+
+def test_verify_false_is_passed_through_unchanged():
+    """verify=False (disable checking entirely) must survive intact, not
+    be coerced to some other falsy-but-wrong value."""
+    d = Dashboard("test", test_url, username="u", password="p", verify=False)
+    with patch("requests.Session.post", return_value=_fake_response()) as mock_post:
+        d.login()
+
+    assert mock_post.call_args.kwargs["verify"] is False
+
+
+# --- Certificate pinning (verify=<path>) ------------------------------------
+#
+# A path doesn't just get forwarded as requests' own verify=<path> -- that
+# alone still enforces a hostname/SAN match, which a self-signed
+# seamm_webui certificate can genuinely fail even though it's the right
+# certificate (confirmed for real against MolSSI10: reachable only via a
+# DNS alias -- molssi10.molssi.org -- distinct from the SANs tls.py put in
+# the cert, molssi10/molssi10.chem.vt.edu/localhost). A path instead mounts
+# _PinnedCertAdapter, which verifies the cert's signature against that
+# exact file but skips the hostname check.
+
+
+def test_login_mounts_pinned_adapter_for_cert_path(cert_path):
+    from seamm_dashboard_client.dashboard import _PinnedCertAdapter
+
+    d = Dashboard("test", test_url, username="u", password="p", verify=cert_path)
+    with patch("requests.Session.post", return_value=_fake_response()):
+        session, _ = d.login()
+
+    adapter = session.get_adapter("https://molssi10.example.org")
+    assert isinstance(adapter, _PinnedCertAdapter)
+    assert adapter._certfile == cert_path
+
+
+@pytest.mark.parametrize("verify", [True, False])
+def test_login_does_not_mount_pinned_adapter_for_bool_verify(verify):
+    from seamm_dashboard_client.dashboard import _PinnedCertAdapter
+
+    d = Dashboard("test", test_url, username="u", password="p", verify=verify)
+    with patch("requests.Session.post", return_value=_fake_response()):
+        session, _ = d.login()
+
+    adapter = session.get_adapter("https://molssi10.example.org")
+    assert not isinstance(adapter, _PinnedCertAdapter)
+
+
+def test_login_mounts_pinned_adapter_even_with_blank_credentials(cert_path):
+    """The early "no credentials, no login POST needed" return in login()
+    must not skip mounting the pinned adapter -- _url_get/_url_post reuse
+    this same session for every subsequent request regardless of whether
+    an actual login POST happened."""
+    from seamm_dashboard_client.dashboard import _PinnedCertAdapter
+
+    d = Dashboard("test", test_url, username="", password="", verify=cert_path)
+    session, csrf = d.login()
+
+    assert csrf is None  # confirms the early-return path was taken
+    adapter = session.get_adapter("https://molssi10.example.org")
+    assert isinstance(adapter, _PinnedCertAdapter)
