@@ -1,6 +1,29 @@
 =======
 History
 =======
+2026.8.11 -- Bugfix: no way to trust a self-signed dashboard TLS certificate
+    * ``Dashboard`` gained a ``verify`` parameter (default ``True``,
+      matching ``requests``' own default -- no change for any existing
+      caller). ``False`` disables certificate verification entirely
+      (insecure); a path to a certificate file verifies against that
+      specific certificate instead of the system trust store -- e.g. a
+      self-signed ``seamm_webui`` certificate generated for a
+      non-loopback bind, which ``requests`` previously had no way to
+      trust at all, hard-failing every request with
+      ``SSLCertVerificationError``.
+    * A certificate path does genuine certificate *pinning*, not just a
+      custom CA: it also skips the hostname/SAN match ``requests``
+      normally still enforces even once a certificate's signature is
+      trusted, since a self-signed certificate's SAN list (the machine's
+      own reported hostname) can legitimately differ from the DNS name a
+      client actually reaches it through (confirmed for real: a
+      ``seamm_webui`` certificate listing only its VT-campus-internal
+      FQDN, reached instead via a separate public DNS alias). Fetching
+      the exact certificate file out-of-band already establishes "this is
+      the server I mean" -- the same property a hostname check
+      approximates when verifying against a general CA that could have
+      signed a certificate for any host.
+
 2026.8.10 -- Multi-queue job submission, and two real seamm_webui compatibility bugs
     * ``Dashboard.list_queues()``: lists the queues (clusters, or a plain
       local target) the dashboard's paired JobServer can route jobs to,
