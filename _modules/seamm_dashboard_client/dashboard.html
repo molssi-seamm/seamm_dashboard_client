@@ -1,0 +1,1362 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seamm_dashboard_client.dashboard &mdash; DFTB+ Step 2026.10.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=65cfade2"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            DFTB+ Step
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../user/index.html">User Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer/index.html">Developer Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html">History</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://molssi-seamm.github.io">Main SEAMM documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DFTB+ Step</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">seamm_dashboard_client.dashboard</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for seamm_dashboard_client.dashboard</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+
+<span class="sd">"""</span>
+<span class="sd">A proxy for interacting with SEAMM Dashboards.</span>
+
+<span class="sd">This package provides functions and classes for interacting with the REST api of SEAMM</span>
+<span class="sd">dashboards.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">collections.abc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PurePath</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ssl</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">requests.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTTPAdapter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">requests_toolbelt.multipart.encoder</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultipartEncoder</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1"># logger.setLevel("DEBUG")</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_PinnedCertAdapter</span><span class="p">(</span><span class="n">HTTPAdapter</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""An HTTPS adapter that trusts one specific, exact certificate file,</span>
+<span class="sd">    without requiring the connection's hostname to match any of that</span>
+<span class="sd">    certificate's SANs.</span>
+
+<span class="sd">    Built for a self-signed ``seamm_webui`` certificate (its ``tls.py``</span>
+<span class="sd">    generates one automatically for a non-loopback bind, listing only the</span>
+<span class="sd">    machine's own ``socket.gethostname()``/``getfqdn()`` names as SANs) --</span>
+<span class="sd">    reachable in practice through a DNS alias distinct from those (e.g. a</span>
+<span class="sd">    public-facing name separate from the host's campus-internal FQDN;</span>
+<span class="sd">    confirmed for real against MolSSI10). Plain ``verify=&lt;path&gt;`` alone</span>
+<span class="sd">    still enforces a hostname/SAN match and raises</span>
+<span class="sd">    ``SSLCertVerificationError: Hostname mismatch`` even though the</span>
+<span class="sd">    certificate itself is genuinely the right one -- fetching the exact</span>
+<span class="sd">    certificate file out-of-band (e.g. scp'd from the host) already</span>
+<span class="sd">    establishes "this is the server I mean," the same security property a</span>
+<span class="sd">    hostname check exists to approximate when verifying against a general</span>
+<span class="sd">    CA that could have signed a cert for any host. Skipping the hostname</span>
+<span class="sd">    check here is that trust decision made explicit, not a weakening of</span>
+<span class="sd">    it -- the certificate's signature is still fully verified against the</span>
+<span class="sd">    pinned file.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">certfile</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_certfile</span> <span class="o">=</span> <span class="n">certfile</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">init_poolmanager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">ssl</span><span class="o">.</span><span class="n">create_default_context</span><span class="p">(</span><span class="n">cafile</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_certfile</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">check_hostname</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"ssl_context"</span><span class="p">]</span> <span class="o">=</span> <span class="n">context</span>
+        <span class="c1"># ssl.SSLContext.check_hostname=False alone is not enough: urllib3</span>
+        <span class="c1"># (what requests actually uses) performs its own separate</span>
+        <span class="c1"># hostname assertion on top of the raw ssl module, via</span>
+        <span class="c1"># assert_hostname on the connection pool -- confirmed for real,</span>
+        <span class="c1"># this was still hard-failing with a CertificateError against</span>
+        <span class="c1"># MolSSI10 with only check_hostname turned off.</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"assert_hostname"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">init_poolmanager</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">cert_verify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">verify</span><span class="p">,</span> <span class="n">cert</span><span class="p">):</span>
+        <span class="c1"># The base implementation maps a plain `verify=&lt;path&gt;` string</span>
+        <span class="c1"># into conn.ca_certs/cert_reqs -- redundant here (our ssl_context,</span>
+        <span class="c1"># built with the pinned cert already loaded via</span>
+        <span class="c1"># init_poolmanager(), does the real verification) and would</span>
+        <span class="c1"># additionally re-enable the hostname check we just turned off.</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">cert_reqs</span> <span class="o">=</span> <span class="s2">"CERT_REQUIRED"</span>
+
+
+<div class="viewcode-block" id="safe_filename">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.safe_filename">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">safe_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">filename</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"~"</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">anchor</span> <span class="o">==</span> <span class="s2">""</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s2">"_"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">parts</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s2">"_"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="k">return</span> <span class="s2">"job:data/"</span> <span class="o">+</span> <span class="n">result</span></div>
+
+
+
+<div class="viewcode-block" id="DashboardConnectionError">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.DashboardConnectionError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DashboardConnectionError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span> <span class="o">=</span> <span class="n">dashboard</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DashboardLoginError">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.DashboardLoginError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DashboardLoginError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span> <span class="o">=</span> <span class="n">dashboard</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DashboardNotRunningError">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.DashboardNotRunningError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DashboardNotRunningError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span> <span class="o">=</span> <span class="n">dashboard</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DashboardSubmitError">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.DashboardSubmitError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DashboardSubmitError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span> <span class="o">=</span> <span class="n">dashboard</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DashboardTimeoutError">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.DashboardTimeoutError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DashboardTimeoutError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span> <span class="o">=</span> <span class="n">dashboard</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DashboardUnknownError">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.DashboardUnknownError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DashboardUnknownError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span> <span class="o">=</span> <span class="n">dashboard</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dashboard</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Dashboard">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Dashboard</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">url</span><span class="p">,</span>
+        <span class="n">username</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">password</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">user_agent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+        <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""The interface to a Dashboard</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        verify : bool or str = True</span>
+<span class="sd">            Passed straight through to every ``requests`` call as its own</span>
+<span class="sd">            ``verify`` argument. ``True`` (default) verifies against the</span>
+<span class="sd">            system trust store, matching ``requests``' own default --</span>
+<span class="sd">            unchanged behavior for every dashboard that doesn't set this.</span>
+<span class="sd">            ``False`` disables certificate verification entirely (insecure</span>
+<span class="sd">            -- only for a trusted network you control). A path instead</span>
+<span class="sd">            verifies against that specific certificate/CA bundle, e.g. a</span>
+<span class="sd">            self-signed ``seamm_webui`` certificate generated by its</span>
+<span class="sd">            ``tls.py`` for a non-loopback bind -- the case this was added</span>
+<span class="sd">            for, so an internal cluster dashboard doesn't need a</span>
+<span class="sd">            browser-trusted CA at all.</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">seamm_dashboard_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">__version__</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_url</span> <span class="o">=</span> <span class="n">url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_verify</span> <span class="o">=</span> <span class="n">verify</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">password</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">timeout</span>
+        <span class="k">if</span> <span class="n">user_agent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">user_agent</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"SEAMMDashboardClient/</span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">platform</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">user_agent</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user_agent</span><span class="si">}</span><span class="s2"> SEAMMDashboardClient/</span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="s2">"({platform.platform()})"</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dump</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">"The name of the dashboard."</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">"The base url of the dashboard"</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">verify</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">"How to verify this dashboard's TLS certificate -- see __init__."</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify</span>
+
+<div class="viewcode-block" id="Dashboard.job">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.job">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return a single job given the id."""</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="sa">f</span><span class="s2">"/api/jobs/</span><span class="si">{</span><span class="n">job_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Encountered an error getting the job from dashboard "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, error code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+        <span class="k">return</span> <span class="n">_Job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.jobs">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.jobs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sort_by</span><span class="o">=</span><span class="s2">"id"</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">"asc"</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return a list of Job objects."""</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="k">if</span> <span class="n">description</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"description"</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
+        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"limit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">limit</span>
+        <span class="k">if</span> <span class="n">sort_by</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"sort_by"</span><span class="p">]</span> <span class="o">=</span> <span class="n">sort_by</span>
+        <span class="k">if</span> <span class="n">order</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"order"</span><span class="p">]</span> <span class="o">=</span> <span class="n">order</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="s2">"/api/jobs"</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Encountered an error getting the list of jobs from dashboard "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, error code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">_Job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()]</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.add_project">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.add_project">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">""</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Add a project to the datastore for this dashboard.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        project : str</span>
+<span class="sd">            The name of the new project.</span>
+<span class="sd">        description : str</span>
+<span class="sd">            An optional description of the project.</span>
+<span class="sd">        """</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">project</span><span class="p">,</span>
+            <span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_post</span><span class="p">(</span><span class="s2">"/api/projects"</span><span class="p">,</span> <span class="n">json_data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">201</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardUnknownError</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">+</span> <span class="s2">"/api/projects"</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"There was an error creating a project at </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"    code = </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.list_projects">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.list_projects">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_projects</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Get a list of the project names.</span>
+
+<span class="sd">        Uses ``GET /api/projects`` (full project objects, ``name`` a</span>
+<span class="sd">        required field on both backends -- see the old ``seamm_dashboard``'s</span>
+<span class="sd">        ``swagger.yml``) and extracts just the names, rather than the old</span>
+<span class="sd">        dashboard-only ``GET /api/projects/list`` (a list of bare name</span>
+<span class="sd">        strings) this used to call: ``seamm_webui`` has no such endpoint at</span>
+<span class="sd">        all -- hitting it there 422s (FastAPI trying to parse the literal</span>
+<span class="sd">        path segment ``"list"`` as an ``/api/projects/{project_id}``</span>
+<span class="sd">        integer). This shape works identically against both, so no</span>
+<span class="sd">        per-backend branching is needed.</span>
+<span class="sd">        """</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="s2">"/api/projects"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Encountered an error getting the project list from dashboard "</span>
+                <span class="sa">f</span><span class="s2">" '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">', error code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">project</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="k">for</span> <span class="n">project</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()]</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.list_queues">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.list_queues">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_queues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Get the list of queues (cluster/section targets) this</span>
+<span class="sd">        dashboard's paired JobServer instance can route jobs to, with the</span>
+<span class="sd">        per-field override limits a submission client should render as</span>
+<span class="sd">        constrained inputs -- see seamm_jobserver's</span>
+<span class="sd">        docs/developer_guide/campaigns/2026-08-10/ (multi-queue routing).</span>
+
+<span class="sd">        Empty if the dashboard doesn't support this at all (only</span>
+<span class="sd">        seamm_webui implements ``GET /api/queues`` -- an old</span>
+<span class="sd">        seamm_dashboard 404s) or has no queues configured there -- both</span>
+<span class="sd">        treated as an ordinary case, not an error, since queue routing is</span>
+<span class="sd">        an optional, additive feature a caller should just not offer a</span>
+<span class="sd">        picker for rather than fail over.</span>
+<span class="sd">        """</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="s2">"/api/queues"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Dashboard '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">' has no queues available "</span>
+                <span class="sa">f</span><span class="s2">"(code=</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">); treating as none configured."</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.project">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.project">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project_id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return a Project given the id.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        project_id : int</span>
+<span class="sd">            The id of the project.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        _Project()</span>
+<span class="sd">            A Project object.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">          The Project data looks like this::</span>
+
+<span class="sd">            {</span>
+<span class="sd">               "description": "",</span>
+<span class="sd">               "flowcharts": [],</span>
+<span class="sd">               "group": "staff",</span>
+<span class="sd">               "group_id": 2,</span>
+<span class="sd">               "id": 3,</span>
+<span class="sd">               "jobs": [],</span>
+<span class="sd">               "name": "recipes",</span>
+<span class="sd">               "owner": "psaxe",</span>
+<span class="sd">               "owner_id": 2,</span>
+<span class="sd">               "path": "/Users/psaxe/SEAMM_DEV/Jobs/projects/recipes",</span>
+<span class="sd">               "special_groups": [],</span>
+<span class="sd">               "special_users": []</span>
+<span class="sd">             }</span>
+<span class="sd">        """</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="sa">f</span><span class="s2">"/api/projects/</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Encountered an error getting the project </span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s2"> from dashboard "</span>
+                <span class="sa">f</span><span class="s2">" '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">', error code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+        <span class="k">return</span> <span class="n">_Project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.projects">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.projects">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">projects</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return a list of Project objects.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            If not None, select only projects whose name matches</span>
+<span class="sd">        description : str</span>
+<span class="sd">            If not None, select only projects whose description matches</span>
+<span class="sd">        limit : int</span>
+<span class="sd">            If not None, limit the number of projects to this value</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        [_Project]</span>
+<span class="sd">            A list of Project object.</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">          The Project data looks like this::</span>
+
+<span class="sd">            {</span>
+<span class="sd">               "description": "",</span>
+<span class="sd">               "flowcharts": [],</span>
+<span class="sd">               "group": "staff",</span>
+<span class="sd">               "group_id": 2,</span>
+<span class="sd">               "id": 3,</span>
+<span class="sd">               "jobs": [],</span>
+<span class="sd">               "name": "recipes",</span>
+<span class="sd">               "owner": "psaxe",</span>
+<span class="sd">               "owner_id": 2,</span>
+<span class="sd">               "path": "/Users/psaxe/SEAMM_DEV/Jobs/projects/recipes",</span>
+<span class="sd">               "special_groups": [],</span>
+<span class="sd">               "special_users": []</span>
+<span class="sd">             }</span>
+<span class="sd">        """</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="n">description</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"description"</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
+        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"limit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">limit</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="s2">"/api/projects"</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Encountered an error getting the project list from dashboard "</span>
+                <span class="sa">f</span><span class="s2">" '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">', error code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="n">p</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]:</span> <span class="n">_Project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()}</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.login">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.login">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Log the session into the dashboard.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dashboard : str</span>
+<span class="sd">            The name of the dashboard.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        requests.session, str</span>
+<span class="sd">            session, and the CSRF token or None</span>
+<span class="sd">        """</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">+</span> <span class="s2">"/api/auth/token"</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">session</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_verify</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="c1"># A path -&gt; pin to that exact certificate (see</span>
+            <span class="c1"># _PinnedCertAdapter) rather than requests' normal CA-plus-</span>
+            <span class="c1"># hostname check. Mounted here, before the early return below,</span>
+            <span class="c1"># since this session is also what _url_get/_url_post reuse</span>
+            <span class="c1"># for every subsequent request -- including a blank-</span>
+            <span class="c1"># credentials dashboard that never actually POSTs to log in.</span>
+            <span class="n">session</span><span class="o">.</span><span class="n">mount</span><span class="p">(</span><span class="s2">"https://"</span><span class="p">,</span> <span class="n">_PinnedCertAdapter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_verify</span><span class="p">))</span>
+
+        <span class="c1"># Treat a blank string the same as None -- not just a defensive</span>
+        <span class="c1"># equivalence. seamm/tk_job_handler.py's credential dialog returns</span>
+        <span class="c1"># "" (not None) for a field left empty when the user clicks OK,</span>
+        <span class="c1"># e.g. against a seamm_webui instance running --auth none, which</span>
+        <span class="c1"># needs no real login at all. Without this, an empty-but-not-None</span>
+        <span class="c1"># username/password would be POSTed as real credentials and</span>
+        <span class="c1"># rejected (no user named ""), raising DashboardLoginError instead</span>
+        <span class="c1"># of the no-login-needed path this is clearly asking for.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">password</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">session</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"User-Agent"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_agent</span><span class="p">}</span>
+
+        <span class="n">authentication</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"username"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+            <span class="s2">"password"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">password</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dump</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"v"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"LOGIN"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"headers:"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"json:"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">authentication</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"x"</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">authentication</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verify</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectionError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardConnectionError</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"The dashboard '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">' cannot be reached: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardConnectionError</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Unknown error with the dashboard '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">': (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">) </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dump</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"Result from call:"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"status = </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"reason = </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"Headers"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="o">**</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">},</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Text:</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"x"</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">400</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">"msg"</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="s2">"unknown reason"</span>
+
+                <span class="k">raise</span> <span class="n">DashboardLoginError</span><span class="p">(</span>
+                    <span class="n">url</span><span class="p">,</span>
+                    <span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Could not log in to dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> as "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">password</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">). "</span>
+                        <span class="s2">"Check ~/.seamm.d/seammrc for this information."</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>  <span class="c1"># lgtm [py/clear-text-logging-sensitive-data]</span>
+            <span class="k">elif</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DashboardLoginError</span><span class="p">(</span>
+                    <span class="n">url</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">"The dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> returned an error: code = "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cookie_jar</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">cookies</span>
+                <span class="n">cookies</span> <span class="o">=</span> <span class="n">cookie_jar</span><span class="o">.</span><span class="n">get_dict</span><span class="p">()</span>
+                <span class="k">if</span> <span class="s2">"csrf_access_token"</span> <span class="ow">in</span> <span class="n">cookies</span><span class="p">:</span>
+                    <span class="n">csrf_token</span> <span class="o">=</span> <span class="n">cookies</span><span class="p">[</span><span class="s2">"csrf_access_token"</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Not every dashboard uses a CSRF double-submit cookie</span>
+                    <span class="c1"># (e.g. seamm_webui deliberately doesn't -- it relies</span>
+                    <span class="c1"># on SameSite + CORS instead). The login itself already</span>
+                    <span class="c1"># succeeded (200, session cookie set); a missing CSRF</span>
+                    <span class="c1"># cookie just means don't send the X-CSRF-TOKEN header,</span>
+                    <span class="c1"># not that login failed. _url_get/_url_post already</span>
+                    <span class="c1"># treat csrf_token=None as "no header to add".</span>
+                    <span class="n">csrf_token</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dump</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"cookies:"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">cookies</span><span class="o">.</span><span class="n">get_dict</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">()</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">"json:"</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">()</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">"text:"</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="nb">print</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"headers:"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="o">**</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">},</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"^"</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">session</span><span class="p">,</span> <span class="n">csrf_token</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.status">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.status">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""The status of the Dashboard</span>
+
+<span class="sd">        Contact the Dashboard, checking for errors, timeouts,</span>
+<span class="sd">        etc. and report back the current status.</span>
+
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        status : enum (a string...)</span>
+<span class="sd">            "running"</span>
+<span class="sd">            "down"</span>
+<span class="sd">            "error"</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="s2">"/api/status"</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">DashboardTimeoutError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">"down"</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">DashboardConnectionError</span><span class="p">,</span> <span class="n">DashboardUnknownError</span><span class="p">,</span> <span class="n">DashboardLoginError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">"error"</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">"Encountered an error getting the status from dashboard "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, error code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="s2">"error"</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">"status"</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Dashboard.submit">
+<a class="viewcode-back" href="../../developer/seamm_dashboard_client.html#seamm_dashboard_client.dashboard.Dashboard.submit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">submit</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">flowchart</span><span class="p">,</span>
+        <span class="n">values</span><span class="o">=</span><span class="p">{},</span>
+        <span class="n">project</span><span class="o">=</span><span class="s2">"default"</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
+        <span class="n">queue</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">slurm_overrides</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Submit the job to the dashboard.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        queue : str or None</span>
+<span class="sd">            Which queue (cluster/section) the paired JobServer instance</span>
+<span class="sd">            should route this job to -- one of the names ``list_queues()``</span>
+<span class="sd">            returns. ``None`` (default) lets the JobServer fall back to its</span>
+<span class="sd">            own configured default queue, or run it locally if it has no</span>
+<span class="sd">            queue config at all -- see seamm_jobserver's</span>
+<span class="sd">            docs/developer_guide/campaigns/2026-08-10/.</span>
+<span class="sd">        slurm_overrides : dict or None</span>
+<span class="sd">            Per-directive SLURM overrides for this job, e.g.</span>
+<span class="sd">            ``{"ntasks": 4, "mem": "40G"}`` -- must be authorized by the</span>
+<span class="sd">            chosen queue's ``limits`` (from ``list_queues()``); the</span>
+<span class="sd">            JobServer re-validates server-side regardless of what this</span>
+<span class="sd">            sends.</span>
+<span class="sd">        """</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Submitting job to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+
+        <span class="c1"># Check the status of the dashboard</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">status</span> <span class="o">!=</span> <span class="s2">"running"</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardNotRunningError</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Cannot submit a job to Dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> because it is not "</span>
+                <span class="sa">f</span><span class="s2">"running. url=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Get all the nodes in the workflow</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="n">_all_steps</span><span class="p">(</span><span class="n">flowchart</span><span class="p">)</span>
+
+        <span class="c1"># Find any Parameter steps.</span>
+        <span class="n">parameter_steps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">step_type</span> <span class="o">==</span> <span class="s2">"control-parameters-step"</span><span class="p">:</span>
+                <span class="n">parameter_steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="c1"># Prepare the command line arguments, transforming and remembering files</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameter_steps</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cmdline</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Build the command line</span>
+            <span class="n">optional</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">required</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">parameter_steps</span><span class="p">:</span>
+                <span class="n">variables</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"variables"</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">variables</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">"optional"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Yes"</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"bool"</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">]:</span>
+                                <span class="n">optional</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"--</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">"nargs"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"a single value"</span><span class="p">:</span>
+                                <span class="n">filename</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+                                <span class="k">if</span> <span class="n">filename</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                                    <span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span> <span class="o">=</span> <span class="n">safe_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+                                <span class="n">optional</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"--</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                                <span class="n">optional</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">])</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">optional</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"--</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                                <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">]):</span>
+                                    <span class="k">if</span> <span class="n">filename</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                                        <span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span> <span class="o">=</span> <span class="n">safe_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+                                    <span class="n">optional</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">])</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">optional</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"--</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">"nargs"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"a single value"</span><span class="p">:</span>
+                                <span class="n">optional</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">optional</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">"nargs"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"a single value"</span><span class="p">:</span>
+                                <span class="n">filename</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+                                <span class="k">if</span> <span class="n">filename</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                                    <span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span> <span class="o">=</span> <span class="n">safe_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+                                <span class="n">required</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">])</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">]):</span>
+                                    <span class="k">if</span> <span class="n">filename</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                                        <span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span> <span class="o">=</span> <span class="n">safe_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+                                    <span class="n">required</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">])</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">"nargs"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"a single value"</span><span class="p">:</span>
+                                <span class="n">required</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">required</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">required</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">optional</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"--"</span><span class="p">)</span>
+                <span class="n">cmdline</span> <span class="o">=</span> <span class="n">optional</span> <span class="o">+</span> <span class="n">required</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cmdline</span> <span class="o">=</span> <span class="n">optional</span>
+
+        <span class="c1"># Add files from any other steps</span>
+        <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">parameter_steps</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">uri</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">data_files</span><span class="p">:</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">uri</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"data:"</span><span class="p">):</span>
+                    <span class="n">newname</span> <span class="o">=</span> <span class="s2">"job:data/"</span> <span class="o">+</span> <span class="n">uri</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>
+                    <span class="k">if</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">files</span> <span class="ow">and</span> <span class="n">newname</span> <span class="o">!=</span> <span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">]:</span>
+                        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"Duplicate file '</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">' --&gt; </span><span class="si">{</span><span class="n">uri</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span><span class="si">}</span><span class="s2"> and "</span>
+                            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+                        <span class="p">)</span>
+                    <span class="n">files</span><span class="p">[</span><span class="n">filename</span><span class="p">]</span> <span class="o">=</span> <span class="n">newname</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Can't handle file '</span><span class="si">{</span><span class="n">uri</span><span class="si">}</span><span class="s2">'"</span><span class="p">)</span>
+
+        <span class="c1"># Prepare the data</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"cmdline"</span><span class="p">:</span> <span class="n">cmdline</span><span class="p">,</span> <span class="s2">"control parameters"</span><span class="p">:</span> <span class="n">values</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">queue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="s2">"queue"</span><span class="p">]</span> <span class="o">=</span> <span class="n">queue</span>
+        <span class="k">if</span> <span class="n">slurm_overrides</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="s2">"slurm"</span><span class="p">]</span> <span class="o">=</span> <span class="n">slurm_overrides</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"flowchart"</span><span class="p">:</span> <span class="n">flowchart</span><span class="o">.</span><span class="n">to_text</span><span class="p">(),</span>
+            <span class="s2">"project"</span><span class="p">:</span> <span class="n">project</span><span class="p">,</span>
+            <span class="s2">"title"</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span>
+            <span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+            <span class="s2">"parameters"</span><span class="p">:</span> <span class="n">parameters</span><span class="p">,</span>
+            <span class="s2">"username"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_url_post</span><span class="p">(</span><span class="s2">"/api/jobs"</span><span class="p">,</span> <span class="n">json_data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">201</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardSubmitError</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Error submitting the job to Dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> url=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">, "</span>
+                <span class="sa">f</span><span class="s2">"code=</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">job_id</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">"id"</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"There are no files to transfer."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Transferring files:"</span><span class="p">)</span>
+            <span class="n">job</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">job</span><span class="p">(</span><span class="n">job_id</span><span class="p">)</span>
+
+            <span class="c1"># Now transfer the files</span>
+            <span class="k">for</span> <span class="n">filename</span><span class="p">,</span> <span class="n">newname</span> <span class="ow">in</span> <span class="n">files</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"   </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> --&gt; </span><span class="si">{</span><span class="n">newname</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">job</span><span class="o">.</span><span class="n">put_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">newname</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"There was a major error transferring the file </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> to "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">."</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">result</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">400</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="s2">"A bad input parameters was sent to dashboard "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> transferring the file </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> to it."</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">result</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">403</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="s2">"The user was not properly authorized on dashboard "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> transferring the file </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> to it."</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">result</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">500</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="s2">"There was an internal error in dashboard "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> transferring the file </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> to it."</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">result</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">201</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"The dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> returned error code "</span>
+                        <span class="s2">"</span><span class="si">{results.status_code}</span><span class="s2"> transferring the file </span><span class="si">{filename}</span><span class="s2"> to it."</span>
+                    <span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Submitted job #</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">job_id</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">job_id</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_url_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{},</span> <span class="n">params</span><span class="o">=</span><span class="p">{},</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Get the url, handling errors.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        url : str</span>
+<span class="sd">            The URL to get</span>
+<span class="sd">        headers : dict</span>
+<span class="sd">            Dictionary of HHTP headers to send.</span>
+<span class="sd">        params : dict</span>
+<span class="sd">            A dictionary to sens in the query string.</span>
+<span class="sd">        timeout : int</span>
+<span class="sd">            A custom timeout, defaults to instance value</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        requests.response</span>
+<span class="sd">            The requests Response object</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
+
+        <span class="c1"># Login in to the Dashboard</span>
+        <span class="n">session</span><span class="p">,</span> <span class="n">csrf_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">login</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">csrf_token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">headers</span><span class="p">[</span><span class="s2">"X-CSRF-TOKEN"</span><span class="p">]</span> <span class="o">=</span> <span class="n">csrf_token</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s2">"User-Agent"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_agent</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dump</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"v"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"GET"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"headers:"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"params:"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"x"</span><span class="p">)</span>
+
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">+</span> <span class="n">url</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span>
+                <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+                <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+                <span class="n">verify</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verify</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectTimeout</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardTimeoutError</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"A timeout occurred connecting to the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardTimeoutError</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"A timeout occurred reading from the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectionError</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"A connection error occurred contacting the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DashboardConnectionError</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A unknown error occurred contacting the dashboard '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">'</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2"> -- </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DashboardUnknownError</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dump</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"cookies:"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">cookies</span><span class="o">.</span><span class="n">get_dict</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">()</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">"json:"</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"headers:"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="o">**</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">},</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"^"</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">response</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_url_post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{},</span> <span class="n">json_data</span><span class="o">=</span><span class="p">{},</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Post to the url, handling errors.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        url : str</span>
+<span class="sd">            The URL to get</span>
+<span class="sd">        headers : dict</span>
+<span class="sd">            Dictionary of HTTP headers to sned.</span>
+<span class="sd">        json_data : dict</span>
+<span class="sd">            A JSON serializable object to send in the body.</span>
+<span class="sd">        timeout : int</span>
+<span class="sd">            A custom timeout, defaults to instance value</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        requests.response</span>
+<span class="sd">            The requests Response object</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
+
+        <span class="c1"># Login in to the Dashboard</span>
+        <span class="n">session</span><span class="p">,</span> <span class="n">csrf_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">login</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">csrf_token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">headers</span><span class="p">[</span><span class="s2">"X-CSRF-TOKEN"</span><span class="p">]</span> <span class="o">=</span> <span class="n">csrf_token</span>
+        <span class="n">headers</span><span class="p">[</span><span class="s2">"User-Agent"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_agent</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dump</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"v"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"POST"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"headers:"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"json:"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">json_data</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"x"</span><span class="p">)</span>
+
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">+</span> <span class="n">url</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                    <span class="n">url</span><span class="p">,</span>
+                    <span class="n">json</span><span class="o">=</span><span class="n">json_data</span><span class="p">,</span>
+                    <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+                    <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+                    <span class="n">verify</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verify</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                    <span class="n">url</span><span class="p">,</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                    <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+                    <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+                    <span class="n">verify</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verify</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectTimeout</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardTimeoutError</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"A timeout occurred connecting to the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardTimeoutError</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"A timeout occurred reading from the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectionError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardConnectionError</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"A connection error occurred contacting the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DashboardUnknownError</span><span class="p">(</span>
+                <span class="n">url</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"A unknown error occurred contacting the dashboard '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">'</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2"> -- </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dump</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"cookies:"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">cookies</span><span class="o">.</span><span class="n">get_dict</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"headers:"</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="o">**</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">},</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="s2">"^"</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Project</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Mapping</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashboard</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""The interface to a Project</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : dict</span>
+<span class="sd">           The dictionary of data for the Project</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dashboard</span> <span class="o">=</span> <span class="n">dashboard</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Allow [] to access the data!"""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">iter</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Allow iteration over the object"""</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The len() command"""</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="s2">"A string representation."</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">"The project id."</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dashboard</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">"The dashboard for this project."</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dashboard</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Return a list of Job objects."""</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># placeholder for when the REST API is expanded</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="sa">f</span><span class="s2">"/api/projects/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">/jobs"</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Encountered an error getting the list of jobs for project "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> from dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, error code: "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">_Job</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_all_steps</span><span class="p">(</span><span class="n">flowchart</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Every step connected to the start, in order, following every edge.</span>
+
+<span class="sd">    Flowchart.get_nodes() follows only the "next" edges, so it stops at a loop: the</span>
+<span class="sd">    steps inside and after it were missed, and the files they need were not uploaded.</span>
+<span class="sd">    """</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">flowchart</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="s2">"1"</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">queue</span> <span class="o">=</span> <span class="p">[</span><span class="n">start</span><span class="p">]</span>
+    <span class="k">while</span> <span class="n">queue</span><span class="p">:</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">uuid</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">uuid</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">flowchart</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">"out"</span><span class="p">):</span>
+            <span class="n">queue</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">node2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_file_paths</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The paths of a job's files, relative to the job, from either dashboard.</span>
+
+<span class="sd">    seamm_webui lists ``{"path", "size"}`` entries. The old seamm_dashboard lists a</span>
+<span class="sd">    tree, whose files are the entries with an ``a_attr``, under the entry whose</span>
+<span class="sd">    parent is "#". (This used to test ``"a_attr" in data`` rather than each entry, so</span>
+<span class="sd">    it found no files, and failed on seamm_webui's listing.)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="s2">"path"</span> <span class="ow">in</span> <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">PurePath</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"path"</span><span class="p">])</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+
+    <span class="n">root</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"parent"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"#"</span><span class="p">:</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">PurePath</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
+            <span class="k">break</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"a_attr"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">PurePath</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"parent"</span><span class="p">])</span> <span class="o">/</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="k">if</span> <span class="n">root</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Job</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Mapping</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dashboard</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""The interface to a Project</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : dict</span>
+<span class="sd">           The dictionary of data for the Job</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">          The JSON for a job looks like this::</span>
+
+<span class="sd">            {</span>
+<span class="sd">                "description": "Test for the PACKMOL step.\n\nbenzene::water $na::$...</span>
+<span class="sd">                "finished": "2022-05-26 05:46",</span>
+<span class="sd">                "flowchart_id": "18",</span>
+<span class="sd">                "group": null,</span>
+<span class="sd">                "group_id": null,</span>
+<span class="sd">                "id": 41,</span>
+<span class="sd">                "last_update": "2022-05-26 05:46",</span>
+<span class="sd">                "owner": "psaxe",</span>
+<span class="sd">                "owner_id": 2,</span>
+<span class="sd">                "parameters": {</span>
+<span class="sd">                  "cmdline": [</span>
+<span class="sd">                    "--na",</span>
+<span class="sd">                    "1",</span>
+<span class="sd">                    "--nb",</span>
+<span class="sd">                    "3"</span>
+<span class="sd">                  ]</span>
+<span class="sd">                },</span>
+<span class="sd">                "path": "/Users/psaxe/SEAMM_DEV/Jobs/projects/default/Job_000041",</span>
+<span class="sd">                "projects": [</span>
+<span class="sd">                  {</span>
+<span class="sd">                    "id": 1,</span>
+<span class="sd">                    "name": "default"</span>
+<span class="sd">                  }</span>
+<span class="sd">                ],</span>
+<span class="sd">                "started": "2022-05-26 05:46",</span>
+<span class="sd">                "status": "finished",</span>
+<span class="sd">                "submitted": "2022-05-26 05:46",</span>
+<span class="sd">                "title": "PACKMOL test flowchart #16, spherical region using densi...</span>
+<span class="sd">            },</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dashboard</span> <span class="o">=</span> <span class="n">dashboard</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Allow [] to access the data!"""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">iter</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Allow iteration over the object"""</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The len() command"""</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="s2">"A string representation."</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">"The job id."</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dashboard</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">"The dashboard for this project."</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dashboard</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""List the files in a job.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        """</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span><span class="sa">f</span><span class="s2">"/api/jobs/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">/files"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Encountered an error getting the file list from job </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"dashboard '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">', error code: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">return</span> <span class="n">_file_paths</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">())</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Get a file from a job.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : str</span>
+<span class="sd">            The name of the file</span>
+<span class="sd">        """</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"filename"</span><span class="p">:</span> <span class="n">filename</span><span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">_url_get</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"/api/jobs/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">/files/download"</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectTimeout</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A timeout occurred connecting to the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A timeout occurred reading from the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectionError</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"A connection error occurred contacting the dashboard "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"A unknown error occurred contacting the dashboard "</span>
+                <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">'</span><span class="se">\n</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2"> -- </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Encountered an error getting the status from dashboard"</span>
+                <span class="sa">f</span><span class="s2">" '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">', job </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">. error code: "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"UTF-8"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">put_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">localfile</span><span class="p">,</span> <span class="n">remotefile</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Put a file to a job.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        local : str or Path</span>
+<span class="sd">            The local file</span>
+<span class="sd">        remotefile : str</span>
+<span class="sd">            The remote path from the job to the file.</span>
+<span class="sd">        """</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">MultipartEncoder</span><span class="p">(</span>
+            <span class="n">fields</span><span class="o">=</span><span class="p">{</span><span class="s2">"file"</span><span class="p">:</span> <span class="p">(</span><span class="n">remotefile</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">localfile</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">),</span> <span class="s2">"text/plain"</span><span class="p">)}</span>
+        <span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Content-Type"</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">content_type</span><span class="p">}</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">_url_post</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"/api/jobs/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">/files"</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">m</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectTimeout</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A timeout occurred connecting to the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A timeout occurred reading from the dashboard </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectionError</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"A connection error occurred contacting the dashboard "</span>
+                <span class="s2">"</span><span class="si">{self.dashboard.name}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"A unknown error occurred contacting the dashboard "</span>
+                <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dashboard</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">'</span><span class="se">\n</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2"> -- </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">response</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
