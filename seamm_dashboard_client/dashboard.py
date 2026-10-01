@@ -980,6 +980,31 @@ class _Project(collections.abc.Mapping):
         return [_Job(self.dashboard, p) for p in response.json()]
 
 
+def _file_paths(data):
+    """The paths of a job's files, relative to the job, from either dashboard.
+
+    seamm_webui lists ``{"path", "size"}`` entries. The old seamm_dashboard lists a
+    tree, whose files are the entries with an ``a_attr``, under the entry whose
+    parent is "#". (This used to test ``"a_attr" in data`` rather than each entry, so
+    it found no files, and failed on seamm_webui's listing.)
+    """
+    if all("path" in entry for entry in data):
+        return [PurePath(entry["path"]) for entry in data]
+
+    root = None
+    for entry in data:
+        if entry.get("parent") == "#":
+            root = PurePath(entry["id"])
+            break
+
+    result = []
+    for entry in data:
+        if "a_attr" in entry:
+            path = PurePath(entry["parent"]) / entry["text"]
+            result.append(path.relative_to(root) if root is not None else path)
+    return result
+
+
 class _Job(collections.abc.Mapping):
     def __init__(self, dashboard, data):
         """The interface to a Project
@@ -1067,23 +1092,7 @@ class _Job(collections.abc.Mapping):
             )
             return []
 
-        data = response.json()
-
-        # Find the root path that everything is relative to.
-        root = None
-        for entry in data:
-            if entry["parent"] == "#":
-                root = PurePath(entry["id"])
-                break
-
-        result = []
-        for entry in data:
-            if "a_attr" in data:
-                # It's a file!
-                path = PurePath(data["parent"]) / data["text"]
-                result.append(path.relative_to(root))
-
-        return result
+        return _file_paths(response.json())
 
     def get_file(self, filename):
         """Get a file from a job.

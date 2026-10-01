@@ -1333,3 +1333,21 @@ def test_login_mounts_pinned_adapter_even_with_blank_credentials(cert_path):
     assert csrf is None  # confirms the early-return path was taken
     adapter = session.get_adapter("https://molssi10.example.org")
     assert isinstance(adapter, _PinnedCertAdapter)
+
+
+def test_file_paths_from_either_dashboard():
+    """Job.list_files found no files (it tested the list, not each entry) and failed
+    on seamm_webui's listing."""
+    from pathlib import PurePath
+
+    from seamm_dashboard_client.dashboard import _file_paths
+
+    web_ui = [{"path": "job.out", "size": 10}, {"path": "1/step.out", "size": 5}]
+    assert _file_paths(web_ui) == [PurePath("job.out"), PurePath("1/step.out")]
+    old = [
+        {"id": "/jobs/Job_1", "parent": "#", "text": "Job_1"},
+        {"id": "/jobs/Job_1/1", "parent": "/jobs/Job_1", "text": "1"},
+        {"id": "x", "parent": "/jobs/Job_1", "text": "job.out", "a_attr": {}},
+        {"id": "y", "parent": "/jobs/Job_1/1", "text": "step.out", "a_attr": {}},
+    ]
+    assert _file_paths(old) == [PurePath("job.out"), PurePath("1/step.out")]
