@@ -1,6 +1,18 @@
 =======
 History
 =======
+2026.10.1 -- Bugfix: job files listed, and files after a loop uploaded
+    * ``Job.list_files()`` found no files: it tested the whole listing rather than each
+      entry, and failed with ``KeyError: 'parent'`` on the new web UI, which lists
+      ``{"path", "size"}`` entries. It now reads both dashboards' listings and returns
+      the paths relative to the job, as before.
+    * ``Dashboard.submit()`` found the flowchart's steps by following only the "next"
+      edges, so it stopped at a loop: a Parameters step, or the files a step needs,
+      inside or after a loop were missed and not uploaded. It now follows every edge.
+    * Internal: CI now installs the package's declared dependencies with uv rather than
+      a conda test environment; the test and docs extras declare what the tests and
+      docs need beyond the standard tooling.
+
 2026.8.11 -- Bugfix: no way to trust a self-signed dashboard TLS certificate
     * ``Dashboard`` gained a ``verify`` parameter (default ``True``,
       matching ``requests``' own default -- no change for any existing

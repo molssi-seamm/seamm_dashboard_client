@@ -52,6 +52,13 @@ setup(
     # deployment
     install_requires=requirements,
 
+    # Beyond the standard tooling CI installs: the tests mock HTTP with responses,
+    # and the docs use the strike-through extension
+    extras_require={
+        "test": ["responses"],
+        "docs": ["sphinxnotes-strike", "sphinx-rtd-theme"],
+    },
+
     test_suite="tests",
 
     # Valid platforms your code works on, adjust to your flavor
