@@ -1351,3 +1351,22 @@ def test_file_paths_from_either_dashboard():
         {"id": "y", "parent": "/jobs/Job_1/1", "text": "step.out", "a_attr": {}},
     ]
     assert _file_paths(old) == [PurePath("job.out"), PurePath("1/step.out")]
+
+
+def test_all_steps_include_loops():
+    """submit() found the steps with get_nodes(), which stops at a loop, so files
+    needed inside or after a loop were not uploaded."""
+    import pytest
+
+    builder = pytest.importorskip("seamm.builder")
+    pytest.importorskip("loop_step")
+    pytest.importorskip("from_smiles_step")
+    from seamm_dashboard_client.dashboard import _all_steps
+
+    fb = builder.FlowchartBuilder("loop")
+    with fb.loop(type="Foreach", variable="SMILES", values="C CC") as body:
+        body.add("FromSMILESStep", smiles_string="$SMILES")
+    fb.add("FromSMILESStep", smiles_string="O")
+    names = [type(node).__name__ for node in _all_steps(fb.flowchart)]
+    assert names.count("FromSMILES") == 2
+    assert len(names) > len(fb.flowchart.get_nodes())

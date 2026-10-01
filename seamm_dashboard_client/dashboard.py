@@ -598,7 +598,7 @@ class Dashboard(object):
             )
 
         # Get all the nodes in the workflow
-        steps = flowchart.get_nodes()
+        steps = _all_steps(flowchart)
 
         # Find any Parameter steps.
         parameter_steps = []
@@ -978,6 +978,27 @@ class _Project(collections.abc.Mapping):
             return {}
 
         return [_Job(self.dashboard, p) for p in response.json()]
+
+
+def _all_steps(flowchart):
+    """Every step connected to the start, in order, following every edge.
+
+    Flowchart.get_nodes() follows only the "next" edges, so it stops at a loop: the
+    steps inside and after it were missed, and the files they need were not uploaded.
+    """
+    start = flowchart.get_node("1")
+    result = []
+    seen = set()
+    queue = [start]
+    while queue:
+        node = queue.pop(0)
+        if node.uuid in seen:
+            continue
+        seen.add(node.uuid)
+        result.append(node)
+        for edge in flowchart.edges(node, direction="out"):
+            queue.append(edge.node2)
+    return result
 
 
 def _file_paths(data):
