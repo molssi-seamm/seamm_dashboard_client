@@ -365,6 +365,7 @@ def test_list_queues_not_supported_returns_empty_list():
 class _FakeStep:
     step_type = "some-step"
     data_files = []
+    uuid = 1
 
 
 class _FakeFlowchart:
@@ -372,8 +373,17 @@ class _FakeFlowchart:
     Parameter steps and no data files, so no file-transfer requests are
     made, keeping this a pure unit test of the parameters payload."""
 
+    def __init__(self):
+        self._step = _FakeStep()
+
     def get_nodes(self):
-        return [_FakeStep()]
+        return [self._step]
+
+    def get_node(self, uuid):
+        return self._step
+
+    def edges(self, node=None, direction="both"):
+        return []
 
     def to_text(self):
         return "flowchart text"
