@@ -4,6 +4,7 @@
 """Tests for `seamm_dashboard_client` package."""
 
 import json
+from types import SimpleNamespace
 import re
 from unittest.mock import MagicMock, patch
 
@@ -1380,3 +1381,66 @@ def test_all_steps_include_loops():
     names = [type(node).__name__ for node in _all_steps(fb.flowchart)]
     assert names.count("FromSMILES") == 2
     assert len(names) > len(fb.flowchart.get_nodes())
+
+
+class _FakeParametersStep:
+    """A Parameters step with a range, a count, a flag, a list and a positional."""
+
+    step_type = "control-parameters-step"
+    data_files = []
+    uuid = 1
+
+    def __init__(self):
+        def var(optional, type_="str", nargs="a single value"):
+            return {"optional": optional, "type": type_, "nargs": nargs}
+
+        variables = {
+            "scan": var("Yes"),
+            "n": var("Yes", "int"),
+            "verbose": var("Yes", "bool"),
+            "angles": var("Yes", nargs="a list"),
+            "smiles": var("No"),
+        }
+        self.parameters = {"variables": SimpleNamespace(value=variables)}
+
+
+class _FakeParametersFlowchart(_FakeFlowchart):
+    def __init__(self):
+        self._step = _FakeParametersStep()
+
+
+@responses.activate
+def test_submit_values_starting_with_a_minus():
+    """A single value is one argument, --name=value, so that one starting with "-"
+    (a range such as -20:20:20) is not taken for an option."""
+    d = Dashboard("test", test_url)
+    responses.add(responses.POST, "https://test/api/auth/token", status=200)
+    responses.add(
+        responses.GET, "http://test/api/status", json={"status": "running"}, status=200
+    )
+    responses.add(responses.POST, "http://test/api/jobs", json={"id": 42}, status=201)
+
+    d.submit(
+        _FakeParametersFlowchart(),
+        values={
+            "scan": "-20:20:20",
+            "n": 3,
+            "verbose": True,
+            "angles": "10 20",
+            "smiles": "-C",
+        },
+        title="a job",
+    )
+
+    post = [c for c in responses.calls if c.request.url == "http://test/api/jobs"][0]
+    cmdline = json.loads(post.request.body)["parameters"]["cmdline"]
+    assert cmdline == [
+        "--scan=-20:20:20",
+        "--n=3",
+        "--verbose",
+        "--angles",
+        "10",
+        "20",
+        "--",
+        "-C",
+    ]
