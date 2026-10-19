@@ -1,6 +1,11 @@
 =======
 History
 =======
+2026.10.19 -- Bugfix: a value starting with '-' stopped the job
+    * A flowchart's parameter whose value started with '-', such as the range
+      -20:20:20, was taken by the job for an option, and the job stopped before
+      starting. Single values are now passed as --name=value.
+
 2026.10.1 -- Bugfix: job files listed, and files after a loop uploaded
     * ``Job.list_files()`` found no files: it tested the whole listing rather than each
       entry, and failed with ``KeyError: 'parent'`` on the new web UI, which lists

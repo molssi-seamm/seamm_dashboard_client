@@ -626,20 +626,20 @@ class Dashboard(object):
                                 filename = values[name]
                                 if filename not in files:
                                     files[filename] = safe_filename(filename)
-                                optional.append(f"--{name}")
-                                optional.append(files[filename])
+                                optional.append(f"--{name}={files[filename]}")
                             else:
                                 optional.append(f"--{name}")
                                 for filename in shlex.split(values[name]):
                                     if filename not in files:
                                         files[filename] = safe_filename(filename)
                                     optional.append(files[filename])
+                        elif data["nargs"] == "a single value":
+                            # One argument, so that a value starting with "-", such
+                            # as the range "-20:20:20", is not taken for an option
+                            optional.append(f"--{name}={values[name]}")
                         else:
                             optional.append(f"--{name}")
-                            if data["nargs"] == "a single value":
-                                optional.append(values[name])
-                            else:
-                                optional.extend(shlex.split(values[name]))
+                            optional.extend(shlex.split(values[name]))
                     else:
                         if data["type"] == "file":
                             if data["nargs"] == "a single value":
