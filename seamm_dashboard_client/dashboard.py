@@ -22,6 +22,23 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 logger = logging.getLogger(__name__)
 
+
+def split_values(text):
+    """The values in ``text``: separated by whitespace, with single or double quotes
+    around a value that contains spaces.
+
+    A backslash is kept as it is, since it is part of values such as SMILES
+    (``C/C=C\\C``, a Z double bond); ``shlex.split`` treats it as an escape and
+    dropped it. '#' (a triple bond in SMILES) does not start a comment. The same as
+    ``seamm_util.split_values``, copied so that the client does not need seamm_util.
+    """
+    lexer = shlex.shlex(str(text), posix=True)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    lexer.escape = ""
+    return list(lexer)
+
+
 # logger.setLevel("DEBUG")
 
 
@@ -639,7 +656,7 @@ class Dashboard(object):
                             optional.append(f"--{name}={values[name]}")
                         else:
                             optional.append(f"--{name}")
-                            optional.extend(shlex.split(values[name]))
+                            optional.extend(split_values(values[name]))
                     else:
                         if data["type"] == "file":
                             if data["nargs"] == "a single value":
@@ -656,7 +673,7 @@ class Dashboard(object):
                             if data["nargs"] == "a single value":
                                 required.append(values[name])
                             else:
-                                required.extend(shlex.split(values[name]))
+                                required.extend(split_values(values[name]))
             if len(required) > 0:
                 optional.append("--")
                 cmdline = optional + required
