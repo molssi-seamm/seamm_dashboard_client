@@ -1444,3 +1444,65 @@ def test_submit_values_starting_with_a_minus():
         "--",
         "-C",
     ]
+
+
+class _FakeVariables:
+    def __init__(self, value):
+        self.value = value
+
+
+class _FakeListParametersStep(_FakeStep):
+    step_type = "control-parameters-step"
+
+    def __init__(self, variables):
+        self.parameters = {"variables": _FakeVariables(variables)}
+
+
+class _FakeListParametersFlowchart(_FakeFlowchart):
+    def __init__(self, variables):
+        self._step = _FakeListParametersStep(variables)
+
+
+def test_split_values_keeps_backslashes():
+    from seamm_dashboard_client.dashboard import split_values
+
+    assert split_values(r"C/C=C/C C/C=C\C 'O/C=C\O' C#N") == [
+        "C/C=C/C",
+        r"C/C=C\C",
+        r"O/C=C\O",
+        "C#N",
+    ]
+
+
+@responses.activate
+def test_submit_list_of_smiles_keeps_backslashes():
+    """A list of SMILES typed for a one-or-more parameter lost the backslash of a Z
+    double bond: shlex.split gave C/C=CC for C/C=C\\C (Paul; ChemAI 5523,
+    2026-10-30)."""
+    d = Dashboard("test", test_url)
+    responses.add(responses.POST, "https://test/api/auth/token", status=200)
+    responses.add(
+        responses.GET, "http://test/api/status", json={"status": "running"}, status=200
+    )
+    responses.add(responses.POST, "http://test/api/jobs", json={"id": 44}, status=201)
+
+    variables = {
+        "SMILES": {"type": "str", "nargs": "one or more values", "optional": "Yes"},
+        "more": {"type": "str", "nargs": "one or more values", "optional": "No"},
+    }
+    d.submit(
+        _FakeListParametersFlowchart(variables),
+        values={"SMILES": r"C/C=C/C C/C=C\C", "more": r"O/C=C\O C#N"},
+        title="a job",
+    )
+
+    post = [c for c in responses.calls if c.request.url == "http://test/api/jobs"][0]
+    cmdline = json.loads(post.request.body)["parameters"]["cmdline"]
+    assert cmdline == [
+        "--SMILES",
+        "C/C=C/C",
+        r"C/C=C\C",
+        "--",
+        r"O/C=C\O",
+        "C#N",
+    ]

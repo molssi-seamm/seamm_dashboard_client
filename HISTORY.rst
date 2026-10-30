@@ -1,6 +1,14 @@
 =======
 History
 =======
+2026.10.30 -- Bugfix: lists of values lost their backslashes (Z double bonds in SMILES)
+    * A list of values typed for a parameter with one or more values was split with
+      ``shlex.split``, which treats a backslash as an escape and drops it. A list of
+      SMILES such as ``C/C=C/C C/C=C\C`` gave ``C/C=CC`` for the Z isomer, so the
+      job built it as E or with the stereo unspecified, unless each value was quoted.
+      The values are now split keeping backslashes; quotes work as before. Lists of
+      file names are split as before.
+
 2026.10.19 -- Bugfix: a value starting with '-' stopped the job
     * A flowchart's parameter whose value started with '-', such as the range
       -20:20:20, was taken by the job for an option, and the job stopped before
